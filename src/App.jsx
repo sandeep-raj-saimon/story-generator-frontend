@@ -4,6 +4,9 @@ import LandingPage from './components/layout/LandingPage'
 import StoryInput from './components/story/StoryInput'
 import SignIn from './components/auth/SignIn'
 import SignUp from './components/auth/SignUp'
+import StoryDetail from './components/story/StoryDetail'
+import MyStories from './components/story/MyStories'
+import MediaGeneration from './components/story/MediaGeneration'
 
 const AppContent = () => {
   const location = useLocation()
@@ -18,6 +21,9 @@ const AppContent = () => {
         <Route path="/create" element={<StoryInput />} />
         <Route path="/signin" element={<SignIn />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/stories/:id" element={<StoryDetail />} />
+        <Route path="/my-stories" element={<MyStories />} />
+        <Route path="/stories/:storyId/media" element={<MediaGeneration />} />
         {/* Add more routes as needed */}
       </Routes>
     </div>

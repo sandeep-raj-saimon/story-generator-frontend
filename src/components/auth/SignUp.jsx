@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 const SignUp = () => {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -31,9 +32,31 @@ const SignUp = () => {
     }
 
     try {
-      // TODO: Implement sign up logic
-      console.log('Sign up attempt:', formData)
+      const response = await fetch('http://localhost:8000/api/auth/register/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: formData.name,
+          email: formData.email,
+          password: formData.password
+        })
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Registration failed');
+      }
+
+      const data = await response.json();
+      // Store tokens in localStorage
+      localStorage.setItem('accessToken', data.access);
+      localStorage.setItem('refreshToken', data.refresh);
+      localStorage.setItem('username', JSON.stringify(data.user.username));
+      navigate('/create');
     } catch (error) {
+      console.error('Sign up error:', error)
       setError('Failed to create account. Please try again.')
     } finally {
       setIsLoading(false)
@@ -59,7 +82,7 @@ const SignUp = () => {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                Full name
+                Username
               </label>
               <div className="mt-1">
                 <input

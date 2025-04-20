@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-
+import { useNavigate } from 'react-router-dom'
 const SignIn = () => {
+  const navigate = useNavigate()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -24,8 +25,25 @@ const SignIn = () => {
 
     try {
       // TODO: Implement sign in logic
-      console.log('Sign in attempt:', formData)
+      const response = await fetch('http://localhost:8000/api/auth/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Login failed');
+      }
+      const data = await response.json();
+      // Store tokens in localStorage
+      localStorage.setItem('accessToken', data.access);
+      localStorage.setItem('refreshToken', data.refresh);
+      localStorage.setItem('username', JSON.stringify(data.user.username));
+      navigate('/create');
     } catch (err) {
+      console.error('Sign in error:', err)
       setError('Failed to sign in. Please check your credentials.')
     } finally {
       setIsLoading(false)
@@ -137,15 +155,6 @@ const SignIn = () => {
                   className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
                 >
                   <span>Google</span>
-                </button>
-              </div>
-
-              <div>
-                <button
-                  type="button"
-                  className="w-full inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                >
-                  <span>GitHub</span>
                 </button>
               </div>
             </div>

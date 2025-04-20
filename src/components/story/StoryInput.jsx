@@ -1,10 +1,13 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const StoryInput = () => {
+  const navigate = useNavigate()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [wordCount, setWordCount] = useState(0)
-  const [isSegmenting, setIsSegmenting] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
 
   const handleTitleChange = (e) => {
     setTitle(e.target.value)
@@ -16,19 +19,38 @@ const StoryInput = () => {
     setWordCount(text.trim().split(/\s+/).length)
   }
 
-  const handleSegmentStory = async (e) => {
+  const handleSaveStory = async (e) => {
     e.preventDefault()
-    setIsSegmenting(true)
+    setIsSaving(true)
+    setError('')
 
     try {
-      // TODO: Implement API call to segment the story
-      // This will return segments with scene descriptions
-      console.log('Segmenting story:', { title, content })
-      // After successful segmentation, redirect to scene editor
-    } catch (error) {
-      console.error('Failed to segment story:', error)
+      const response = await fetch('http://localhost:8000/api/stories/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({
+          title,
+          content,
+          is_public: false
+        })
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to save story')
+      }
+
+      const data = await response.json()
+      // After successful save, redirect to story detail page
+      navigate(`/stories/${data.id}`)
+    } catch (err) {
+      console.error('Save story error:', err)
+      setError(err.message)
     } finally {
-      setIsSegmenting(false)
+      setIsSaving(false)
     }
   }
 
@@ -36,7 +58,7 @@ const StoryInput = () => {
     <div className="max-w-4xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6 text-gray-800">Create Your Story</h1>
       
-      <form onSubmit={handleSegmentStory} className="space-y-6">
+      <form onSubmit={handleSaveStory} className="space-y-6">
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-gray-700">
             Story Title
@@ -74,18 +96,23 @@ const StoryInput = () => {
           <h3 className="text-sm font-medium text-blue-800">How it works:</h3>
           <ol className="mt-2 text-sm text-blue-700 list-decimal list-inside space-y-1">
             <li>Enter your story title and content</li>
-            <li>Click "Segment Story" to break your story into scenes</li>
+            <li>Click "Save Story" to save your story</li>
+            <li>After saving, you'll be able to segment your story into scenes</li>
             <li>Review and edit scene descriptions</li>
             <li>Create scenes from the descriptions</li>
           </ol>
         </div>
 
+        {error && (
+          <div className="text-red-500 text-sm text-center">{error}</div>
+        )}
+
         <button
           type="submit"
-          disabled={isSegmenting}
+          disabled={isSaving}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
-          {isSegmenting ? 'Segmenting Story...' : 'Segment Story'}
+          {isSaving ? 'Saving Story...' : 'Save Story'}
         </button>
       </form>
     </div>

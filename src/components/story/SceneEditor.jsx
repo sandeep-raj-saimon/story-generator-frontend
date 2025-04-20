@@ -1,90 +1,160 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 
-const SceneEditor = ({ scene, onSave, onCancel }) => {
-  const [isEditing, setIsEditing] = useState(false)
-  const [editedDescription, setEditedDescription] = useState(scene.description)
+const SceneEditor = ({ sceneId, storyId, onSave, onCancel }) => {
+  const [scene, setScene] = useState({
+    title: '',
+    content: '',
+    scene_description: ''
+  })
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleEdit = () => {
-    setIsEditing(true)
+  useEffect(() => {
+    if (sceneId) {
+      fetchScene()
+    }
+  }, [sceneId])
+
+  const fetchScene = async () => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/stories/${storyId}/scenes/${sceneId}/`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch scene')
+      }
+
+      const data = await response.json()
+      setScene(data)
+    } catch (err) {
+      console.error('Error fetching scene:', err)
+      setError('Failed to load scene')
+    }
   }
 
-  const handleSave = () => {
-    onSave({
-      ...scene,
-      description: editedDescription
-    })
-    setIsEditing(false)
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const url = sceneId 
+        ? `http://localhost:8000/api/stories/${storyId}/scenes/${sceneId}/`
+        : `http://localhost:8000/api/stories/${storyId}/scenes/`
+      
+      const method = sceneId ? 'PUT' : 'POST'
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify(scene)
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to save scene')
+      }
+
+      const data = await response.json()
+      onSave(data)
+    } catch (err) {
+      console.error('Save scene error:', err)
+      setError(err.message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleCancel = () => {
-    setEditedDescription(scene.description)
-    setIsEditing(false)
-    onCancel()
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setScene(prev => ({
+      ...prev,
+      [name]: value
+    }))
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6 mb-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium text-gray-900">
-          Scene {scene.order}
-        </h3>
-        <div className="flex space-x-2">
-          {!isEditing ? (
-            <button
-              onClick={handleEdit}
-              className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Edit
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={handleSave}
-                className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Save
-              </button>
-              <button
-                onClick={handleCancel}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Cancel
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+    <div className="max-w-2xl mx-auto p-6">
+      <h2 className="text-2xl font-bold mb-6">
+        {sceneId ? 'Edit Scene' : 'Create New Scene'}
+      </h2>
 
-      {isEditing ? (
-        <textarea
-          value={editedDescription}
-          onChange={(e) => setEditedDescription(e.target.value)}
-          rows={4}
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          placeholder="Enter scene description..."
-        />
-      ) : (
-        <p className="text-gray-600">{scene.description}</p>
+      {error && (
+        <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-md">
+          {error}
+        </div>
       )}
 
-      {scene.imageUrl && (
-        <div className="mt-4">
-          <img
-            src={scene.imageUrl}
-            alt={`Scene ${scene.order}`}
-            className="rounded-lg max-w-full h-auto"
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div>
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+            Scene Title
+          </label>
+          <input
+            type="text"
+            id="title"
+            name="title"
+            value={scene.title}
+            onChange={handleChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+            required
           />
         </div>
-      )}
 
-      {scene.audioUrl && (
-        <div className="mt-4">
-          <audio controls className="w-full">
-            <source src={scene.audioUrl} type="audio/mpeg" />
-            Your browser does not support the audio element.
-          </audio>
+        <div>
+          <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
+            Scene Content
+          </label>
+          <textarea
+            id="content"
+            name="content"
+            value={scene.content}
+            onChange={handleChange}
+            rows={6}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+            required
+          />
         </div>
-      )}
+
+        <div>
+          <label htmlFor="scene_description" className="block text-sm font-medium text-gray-700 mb-1">
+            Scene Description
+          </label>
+          <textarea
+            id="scene_description"
+            name="scene_description"
+            value={scene.scene_description}
+            onChange={handleChange}
+            rows={4}
+            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+            required
+          />
+        </div>
+
+        <div className="flex justify-end space-x-4">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {isLoading ? 'Saving...' : 'Save Scene'}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }
