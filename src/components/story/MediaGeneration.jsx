@@ -17,9 +17,15 @@ const MediaGeneration = () => {
   const [previewType, setPreviewType] = useState(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false)
+  const [pollingInterval, setPollingInterval] = useState(null)
 
   useEffect(() => {
     fetchScenes()
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval)
+      }
+    }
   }, [storyId])
 
   const fetchScenes = async () => {
@@ -68,19 +74,25 @@ const MediaGeneration = () => {
   const handleGenerateSelected = async () => {
     try {
       setGeneratingSelected(true)
+      const promises = []
       for (const sceneId of selectedScenes) {
-        const response = await fetch(`http://localhost:8000/api/stories/${storyId}/scenes/${sceneId}/generate-image/`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-          }
-        })
+        promises.push(
+          fetch(`http://localhost:8000/api/stories/${storyId}/scenes/${sceneId}/generate-image/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+            }
+          })
+        )
+      }
+      const responses = await Promise.all(promises)
+      for (const response of responses) {
         if (!response.ok) {
-          throw new Error(`Failed to generate media for scene ${sceneId}`)
+          throw new Error(`Failed to generate media for scene `)
         }
       }
-      await fetchScenes()
-      setSelectedScenes([])
+      // await fetchScenes()
+      // setSelectedScenes([])
     } catch (err) {
       setError('Failed to generate selected media')
       console.error('Error generating selected media:', err)
@@ -107,6 +119,48 @@ const MediaGeneration = () => {
     }
   }
 
+  const startPolling = () => {
+    const interval = setInterval(async () => {
+      try {
+        const response = await fetch(`http://localhost:8000/api/stories/${storyId}/preview-status/`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          }
+        })
+        
+        if (response.ok) {
+          const data = await response.json()
+          if (data.status === 'complete') {
+            setPreviewUrl(data.url)
+            setPreviewType(data.format)
+            setIsPreviewOpen(true)
+            setIsGeneratingPreview(false)
+            clearInterval(interval)
+            setPollingInterval(null)
+          }
+        }
+      } catch (err) {
+        console.error('Error polling preview status:', err)
+        clearInterval(interval)
+        setPollingInterval(null)
+      }
+    }, 2000) // Poll every 2 seconds
+    
+    setPollingInterval(interval)
+
+    // Cleanup polling after 5 minutes
+    setTimeout(() => {
+      if (interval === pollingInterval) {
+        clearInterval(interval)
+        setPollingInterval(null)
+        if (isGeneratingPreview) {
+          setError('Preview generation timed out')
+          setIsGeneratingPreview(false)
+        }
+      }
+    }, 300000) // 5 minutes
+  }
+
   const handlePreview = async (format, subFormat = null) => {
     try {
       setIsGeneratingPreview(true)
@@ -127,16 +181,11 @@ const MediaGeneration = () => {
         throw new Error(`Failed to generate preview for ${format}`)
       }
 
-      const blob = await response.blob()
-      const url = URL.createObjectURL(blob)
-      setPreviewUrl(url)
-      setPreviewType(format)
-      setIsPreviewOpen(true)
-      setIsExportOpen(false)
+      // Start polling for preview status
+      startPolling()
     } catch (err) {
       setError(`Failed to generate preview for ${format}`)
       console.error(`Error generating preview for ${format}:`, err)
-    } finally {
       setIsGeneratingPreview(false)
     }
   }
