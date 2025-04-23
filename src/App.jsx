@@ -7,6 +7,7 @@ import SignUp from './components/auth/SignUp'
 import StoryDetail from './components/story/StoryDetail'
 import MyStories from './components/story/MyStories'
 import MediaGeneration from './components/story/MediaGeneration'
+import GeneratedContent from './components/story/GeneratedContent'
 
 const AppContent = () => {
   const location = useLocation()
@@ -24,6 +25,7 @@ const AppContent = () => {
         <Route path="/stories/:id" element={<StoryDetail />} />
         <Route path="/my-stories" element={<MyStories />} />
         <Route path="/stories/:storyId/media" element={<MediaGeneration />} />
+        <Route path="/generated-content" element={<GeneratedContent />} />
         {/* Add more routes as needed */}
       </Routes>
     </div>
