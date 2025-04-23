@@ -9,6 +9,7 @@ const StoryDetail = () => {
   const [story, setStory] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSegmenting, setIsSegmenting] = useState(false)
+  const [isSegmentingDone, setIsSegmentingDone] = useState(false)
   const [error, setError] = useState('')
   const [scenes, setScenes] = useState([])
   const [isEditingScene, setIsEditingScene] = useState(false)
@@ -58,7 +59,12 @@ const StoryDetail = () => {
       }
 
       const data = await response.json()
-      setScenes(data)
+      if (data.length > 0) {
+        setScenes(data)
+        setIsSegmentingDone(true)
+      } else {
+        setScenes([])
+      }
     } catch (err) {
       console.error('Error fetching scenes:', err)
       setError('Failed to load scenes')
@@ -216,7 +222,7 @@ const StoryDetail = () => {
         <div className="flex space-x-4">
           <button
             onClick={handleSegmentStory}
-            disabled={isSegmenting}
+            disabled={isSegmenting || isSegmentingDone}
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
           >
             {isSegmenting ? 'Segmenting...' : 'Segment Story'}

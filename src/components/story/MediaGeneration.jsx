@@ -14,10 +14,11 @@ const MediaGeneration = () => {
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [isMp4SubmenuOpen, setIsMp4SubmenuOpen] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(null)
-  const [previewType, setPreviewType] = useState(null)
+  const [previewType, setPreviewType] = useState('pdf')
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false)
   const [pollingInterval, setPollingInterval] = useState(null)
+  const [selectedMediaType, setSelectedMediaType] = useState('image')
 
   useEffect(() => {
     fetchScenes()
@@ -53,20 +54,77 @@ const MediaGeneration = () => {
   const handleGenerateAll = async () => {
     try {
       setGeneratingAll(true)
-      const response = await fetch(`http://localhost:8000/api/stories/${storyId}/generate-bulk-image/`, {
+      const response = await fetch(`http://localhost:8000/api/stories/${storyId}/generate-bulk-${selectedMediaType}/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
       })
       if (!response.ok) {
-        throw new Error('Failed to generate all media')
+        throw new Error(`Failed to generate all ${selectedMediaType}`)
       }
-      await fetchScenes()
+
+      // Get all scene IDs
+      const scenesResponse = await fetch(`http://localhost:8000/api/stories/${storyId}/scenes/`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      })
+      if (!scenesResponse.ok) {
+        throw new Error('Failed to fetch scenes')
+      }
+      const scenes = await scenesResponse.json()
+      const sceneIds = scenes.map(scene => scene.id)
+      const sceneStatus = new Map(sceneIds.map(id => [id, false]))
+
+      // Start polling for each scene
+      const pollInterval = setInterval(async () => {
+        try {
+          const scenePromises = sceneIds.map(sceneId =>
+            fetch(`http://localhost:8000/api/stories/${storyId}/scenes/${sceneId}/`, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+              }
+            })
+          )
+          
+          const sceneResponses = await Promise.all(scenePromises)
+          const sceneData = await Promise.all(sceneResponses.map(r => r.json()))
+          
+          // Update status for each scene
+          sceneData.forEach((scene, index) => {
+            const sceneId = sceneIds[index]
+            if (scene?.media?.some(m => m.media_type === selectedMediaType)) {
+              sceneStatus.set(sceneId, true)
+            }
+          })
+          
+          // Check if all scenes are done
+          const allDone = Array.from(sceneStatus.values()).every(status => status)
+          if (allDone) {
+            clearInterval(pollInterval)
+            setGeneratingAll(false)
+            await fetchScenes()
+          }
+        } catch (err) {
+          console.error('Error polling media status:', err)
+          clearInterval(pollInterval)
+          setGeneratingAll(false)
+        }
+      }, 5000) // Poll every 5 seconds
+
+      // Cleanup polling after 5 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval)
+        if (generatingAll) {
+          setError(`${selectedMediaType} generation timed out`)
+          setGeneratingAll(false)
+        }
+      }, 300000) // 5 minutes
+      
     } catch (err) {
-      setError('Failed to generate all media')
-      console.error('Error generating all media:', err)
-    } finally {
+      setError(`Failed to generate all ${selectedMediaType}`)
+      console.error(`Error generating all ${selectedMediaType}:`, err)
       setGeneratingAll(false)
     }
   }
@@ -74,10 +132,13 @@ const MediaGeneration = () => {
   const handleGenerateSelected = async () => {
     try {
       setGeneratingSelected(true)
+      const sceneStatus = new Map(selectedScenes.map(id => [id, false]))
+      
+      // Start generation for each scene
       const promises = []
       for (const sceneId of selectedScenes) {
         promises.push(
-          fetch(`http://localhost:8000/api/stories/${storyId}/scenes/${sceneId}/generate-image/`, {
+          fetch(`http://localhost:8000/api/stories/${storyId}/scenes/${sceneId}/generate-${selectedMediaType}/`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
@@ -88,15 +149,59 @@ const MediaGeneration = () => {
       const responses = await Promise.all(promises)
       for (const response of responses) {
         if (!response.ok) {
-          throw new Error(`Failed to generate media for scene `)
+          throw new Error(`Failed to generate ${selectedMediaType} for scene`)
         }
       }
-      // await fetchScenes()
-      // setSelectedScenes([])
+
+      // Start polling for each scene
+      const pollInterval = setInterval(async () => {
+        try {
+          const scenePromises = selectedScenes.map(sceneId =>
+            fetch(`http://localhost:8000/api/stories/${storyId}/scenes/${sceneId}/`, {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+              }
+            })
+          )
+          
+          const sceneResponses = await Promise.all(scenePromises)
+          const sceneData = await Promise.all(sceneResponses.map(r => r.json()))
+          
+          // Update status for each scene
+          sceneData.forEach((scene, index) => {
+            const sceneId = selectedScenes[index]
+            if (scene?.media?.some(m => m.media_type === selectedMediaType)) {
+              sceneStatus.set(sceneId, true)
+            }
+          })
+          
+          // Check if all scenes are done
+          const allDone = Array.from(sceneStatus.values()).every(status => status)
+          if (allDone) {
+            clearInterval(pollInterval)
+            setGeneratingSelected(false)
+            setSelectedScenes([])
+            await fetchScenes()
+          }
+        } catch (err) {
+          console.error('Error polling media status:', err)
+          clearInterval(pollInterval)
+          setGeneratingSelected(false)
+        }
+      }, 5000) // Poll every 5 seconds
+
+      // Cleanup polling after 5 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval)
+        if (generatingSelected) {
+          setError(`${selectedMediaType} generation timed out`)
+          setGeneratingSelected(false)
+        }
+      }, 300000) // 5 minutes
+      
     } catch (err) {
-      setError('Failed to generate selected media')
-      console.error('Error generating selected media:', err)
-    } finally {
+      setError(`Failed to generate selected ${selectedMediaType}`)
+      console.error(`Error generating selected ${selectedMediaType}:`, err)
       setGeneratingSelected(false)
     }
   }
@@ -122,7 +227,7 @@ const MediaGeneration = () => {
   const startPolling = () => {
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/stories/${storyId}/preview-status/`, {
+        const response = await fetch(`http://localhost:8000/api/stories/${storyId}/preview-status-${previewType}/`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
           }
@@ -144,7 +249,7 @@ const MediaGeneration = () => {
         clearInterval(interval)
         setPollingInterval(null)
       }
-    }, 2000) // Poll every 2 seconds
+    }, 5000) // Poll every 5 seconds
     
     setPollingInterval(interval)
 
@@ -168,7 +273,7 @@ const MediaGeneration = () => {
       
       const endpoint = subFormat 
         ? `/stories/${storyId}/preview/${format}/${subFormat}/`
-        : `/stories/${storyId}/preview/${format}/`
+        : `/stories/${storyId}/preview-${format}/`
       
       const response = await fetch(`http://localhost:8000/api${endpoint}`, {
         method: 'POST',
@@ -178,13 +283,14 @@ const MediaGeneration = () => {
       })
 
       if (!response.ok) {
-        throw new Error(`Failed to generate preview for ${format}`)
+        const errorData = await response.json()
+        throw new Error(errorData.error)
       }
 
       // Start polling for preview status
       startPolling()
     } catch (err) {
-      setError(`Failed to generate preview for ${format}`)
+      setError(err.message)
       console.error(`Error generating preview for ${format}:`, err)
       setIsGeneratingPreview(false)
     }
@@ -236,6 +342,14 @@ const MediaGeneration = () => {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold">Media Generation</h2>
           <div className="flex gap-4">
+            <select
+              value={selectedMediaType}
+              onChange={(e) => setSelectedMediaType(e.target.value)}
+              className="border border-gray-300 rounded px-3 py-2"
+            >
+              <option value="image">Image</option>
+              <option value="audio">Audio</option>
+            </select>
             <button
               onClick={handleGenerateAll}
               disabled={generatingAll}
@@ -250,7 +364,7 @@ const MediaGeneration = () => {
                   Generating...
                 </>
               ) : (
-                'Generate All Media'
+                `Generate All ${selectedMediaType.charAt(0).toUpperCase() + selectedMediaType.slice(1)}`
               )}
             </button>
             {selectedScenes.length > 0 && (
@@ -268,7 +382,7 @@ const MediaGeneration = () => {
                     Generating...
                   </>
                 ) : (
-                  `Generate Selected (${selectedScenes.length})`
+                  `Generate Selected ${selectedMediaType.charAt(0).toUpperCase() + selectedMediaType.slice(1)} (${selectedScenes.length})`
                 )}
               </button>
             )}
@@ -333,10 +447,20 @@ const MediaGeneration = () => {
                               </div>
                             </div>
                           ) : (
-                            <div className="flex items-center justify-center h-48 bg-gray-100 rounded">
-                              <svg className="w-12 h-12 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <div className="flex flex-col items-center justify-center h-48 bg-gray-100 rounded p-4">
+                              <svg className="w-12 h-12 text-gray-400 mb-2" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 3v4a3 3 0 01-3 3H4V3h6zm0 10v4H4v-4h3a3 3 0 003-3z" clipRule="evenodd" />
                               </svg>
+                              <audio 
+                                controls 
+                                className="w-full mt-2"
+                                src={media.url}
+                              >
+                                Your browser does not support the audio element.
+                              </audio>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Audio
+                              </div>
                             </div>
                           )}
                         </div>
