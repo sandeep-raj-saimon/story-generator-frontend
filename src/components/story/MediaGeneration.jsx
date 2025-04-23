@@ -224,10 +224,11 @@ const MediaGeneration = () => {
     }
   }
 
-  const startPolling = () => {
+  const startPolling = (format) => {
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/stories/${storyId}/preview-status/${previewType}/`, {
+
+        const response = await fetch(`http://localhost:8000/api/stories/${storyId}/preview-status/${format}/`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
           }
@@ -270,7 +271,8 @@ const MediaGeneration = () => {
     try {
       setIsGeneratingPreview(true)
       setError(null)
-      
+      setPreviewType(format)
+
       const endpoint = subFormat 
         ? `/stories/${storyId}/preview/${format}/${subFormat}/`
         : `/stories/${storyId}/preview-${format}/`
@@ -287,8 +289,7 @@ const MediaGeneration = () => {
         throw new Error(errorData.error)
       }
 
-      // Start polling for preview status
-      startPolling()
+      startPolling(format)
     } catch (err) {
       setError(err.message)
       console.error(`Error generating preview for ${format}:`, err)
@@ -546,7 +547,7 @@ const MediaGeneration = () => {
                     <div className="absolute left-full top-0 mt-0 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
                       <div className="py-1">
                         <button
-                          onClick={() => handlePreview('mp4', 'audio')}
+                          onClick={() => handlePreview('audio')}
                           disabled={isGeneratingPreview}
                           className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
@@ -556,7 +557,7 @@ const MediaGeneration = () => {
                           Audio Only
                         </button>
                         <button
-                          onClick={() => handlePreview('mp4', 'video')}
+                          onClick={() => handlePreview('video')}
                           disabled={isGeneratingPreview}
                           className="group flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
