@@ -60,7 +60,7 @@ const SceneEditor = ({ sceneId, storyId, onSave, onCancel }) => {
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.error || 'Failed to save scene')
-      }
+  }
 
       const data = await response.json()
       onSave(data)
@@ -121,18 +121,18 @@ const SceneEditor = ({ sceneId, storyId, onSave, onCancel }) => {
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
             required
           />
-        </div>
+      </div>
 
         <div>
           <label htmlFor="scene_description" className="block text-sm font-medium text-gray-700 mb-1">
             Scene Description
           </label>
-          <textarea
+        <textarea
             id="scene_description"
             name="scene_description"
             value={scene.scene_description}
             onChange={handleChange}
-            rows={4}
+          rows={4}
             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
             required
           />

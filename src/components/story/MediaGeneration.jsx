@@ -227,7 +227,7 @@ const MediaGeneration = () => {
   const startPolling = () => {
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`http://localhost:8000/api/stories/${storyId}/preview-status-${previewType}/`, {
+        const response = await fetch(`http://localhost:8000/api/stories/${storyId}/preview-status/${previewType}/`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
           }
@@ -607,7 +607,7 @@ const MediaGeneration = () => {
                   onClick={() => {
                     setIsPreviewOpen(false)
                     setPreviewUrl(null)
-                    setPreviewType(null)
+                    setPreviewType('pdf')
                   }}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
