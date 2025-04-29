@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import VoiceSelectionModal from './VoiceSelectionModal'
 
 const MediaGeneration = () => {
   const { storyId } = useParams()
@@ -19,6 +20,10 @@ const MediaGeneration = () => {
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false)
   const [pollingInterval, setPollingInterval] = useState(null)
   const [selectedMediaType, setSelectedMediaType] = useState('image')
+  const [showVoiceModal, setShowVoiceModal] = useState(false)
+  const [selectedVoice, setSelectedVoice] = useState(null)
+  const [previewAudio, setPreviewAudio] = useState(null)
+  const [isSelectedAll, setIsSelectedAll] = useState(false)
 
   useEffect(() => {
     fetchScenes()
@@ -52,13 +57,22 @@ const MediaGeneration = () => {
   }
 
   const handleGenerateAll = async () => {
+    if (selectedMediaType === 'audio' && !showVoiceModal) {
+      setIsSelectedAll(true)
+      setShowVoiceModal(true)
+      return
+    }
+
     try {
       setGeneratingAll(true)
+      const body = selectedMediaType === 'audio' ? { voice_id: selectedVoice } : {}
       const response = await fetch(`http://localhost:8000/api/stories/${storyId}/generate-bulk-${selectedMediaType}/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        }
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
       })
       if (!response.ok) {
         throw new Error(`Failed to generate all ${selectedMediaType}`)
@@ -74,7 +88,7 @@ const MediaGeneration = () => {
         throw new Error('Failed to fetch scenes')
       }
       const scenes = await scenesResponse.json()
-      const sceneIds = scenes.map(scene => scene.id)
+      let sceneIds = scenes.map(scene => scene.id)
       const sceneStatus = new Map(sceneIds.map(id => [id, false]))
 
       // Start polling for each scene
@@ -96,6 +110,8 @@ const MediaGeneration = () => {
             const sceneId = sceneIds[index]
             if (scene?.media?.some(m => m.media_type === selectedMediaType)) {
               sceneStatus.set(sceneId, true)
+              // remove the sceneId from the sceneIds array when the media is generated
+              sceneIds = sceneIds.filter(id => id !== sceneId)
             }
           })
           
@@ -121,28 +137,37 @@ const MediaGeneration = () => {
           setGeneratingAll(false)
         }
       }, 300000) // 5 minutes
-      
+      setIsSelectedAll(false)
     } catch (err) {
       setError(`Failed to generate all ${selectedMediaType}`)
       console.error(`Error generating all ${selectedMediaType}:`, err)
       setGeneratingAll(false)
+      setIsSelectedAll(false)
     }
   }
 
   const handleGenerateSelected = async () => {
+    if (selectedMediaType === 'audio' && !showVoiceModal) {
+      setShowVoiceModal(true)
+      return
+    }
+
     try {
       setGeneratingSelected(true)
       const sceneStatus = new Map(selectedScenes.map(id => [id, false]))
-      
+      const body = selectedMediaType === 'audio' ? { voice_id: selectedVoice } : {}
       // Start generation for each scene
       const promises = []
+      // if(sele)
       for (const sceneId of selectedScenes) {
         promises.push(
           fetch(`http://localhost:8000/api/stories/${storyId}/scenes/${sceneId}/generate-${selectedMediaType}/`, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-            }
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
           })
         )
       }
@@ -297,37 +322,6 @@ const MediaGeneration = () => {
     }
   }
 
-  const handleExport = async () => {
-    try {
-      const endpoint = previewType === 'mp4' 
-        ? `/stories/${storyId}/export/${previewType}/${previewType === 'mp4' ? 'video' : 'audio'}/`
-        : `/stories/${storyId}/export/${previewType}/`
-      
-      const response = await fetch(`http://localhost:8000/api${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        }
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to export as ${previewType}`)
-      }
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `story-${storyId}.${previewType}`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-    } catch (err) {
-      setError(`Failed to export as ${previewType}`)
-      console.error(`Error exporting as ${previewType}:`, err)
-    }
-  }
 
   if (loading) {
     return (
@@ -596,19 +590,21 @@ const MediaGeneration = () => {
               </h3>
               <div className="flex gap-4">
                 <button
-                  onClick={handleExport}
+                  onClick={() => window.open(previewUrl, '_blank')}
                   className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
+               
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
-                  Export
+                  Download
                 </button>
                 <button
                   onClick={() => {
                     setIsPreviewOpen(false)
                     setPreviewUrl(null)
                     setPreviewType('pdf')
+                    navigate(`/generated-content/`)
                   }}
                   className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
@@ -635,6 +631,35 @@ const MediaGeneration = () => {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Voice Selection Modal */}
+      <VoiceSelectionModal
+        isOpen={showVoiceModal}
+        onClose={() => {
+          setShowVoiceModal(false)
+          setSelectedVoice(null)
+          setSelectedScenes([])
+        }}
+        onSelect={setSelectedVoice}
+        selectedVoice={selectedVoice}
+        onSubmit={isSelectedAll ? handleGenerateAll : handleGenerateSelected}
+      />
+
+      {/* Audio Preview */}
+      {previewAudio && (
+        <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-4">
+          <audio controls src={previewAudio} className="w-full" />
+          <button
+            onClick={() => {
+              URL.revokeObjectURL(previewAudio)
+              setPreviewAudio(null)
+            }}
+            className="mt-2 text-sm text-gray-500 hover:text-gray-700"
+          >
+            Close Preview
+          </button>
         </div>
       )}
     </div>

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
+import apiFetch from '../../utils/api'
+
 const SignIn = () => {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
@@ -24,24 +26,22 @@ const SignIn = () => {
     setError('')
 
     try {
-      // TODO: Implement sign in logic
-      const response = await fetch('http://localhost:8000/api/auth/login/', {
+      const response = await apiFetch('/auth/login/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(formData)
       })
+
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Login failed');
+        const data = await response.json()
+        throw new Error(data.error || 'Login failed')
       }
-      const data = await response.json();
+
+      const data = await response.json()
       // Store tokens in localStorage
-      localStorage.setItem('accessToken', data.access);
-      localStorage.setItem('refreshToken', data.refresh);
-      localStorage.setItem('username', JSON.stringify(data.user.username));
-      navigate('/create');
+      localStorage.setItem('accessToken', data.access)
+      localStorage.setItem('refreshToken', data.refresh)
+      localStorage.setItem('username', JSON.stringify(data.user.username))
+      navigate('/create')
     } catch (err) {
       console.error('Sign in error:', err)
       setError('Failed to sign in. Please check your credentials.')
@@ -137,8 +137,24 @@ const SignIn = () => {
               </button>
             </div>
           </form>
+          <div className="mt-4">
+            <div className="flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  const passwordInput = document.getElementById('password');
+                  if (passwordInput) {
+                    passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+                  }
+                }}
+                className="text-sm text-gray-600 hover:text-gray-900"
+              >
+                Show password
+              </button>
+            </div>
+          </div>
 
-          <div className="mt-6">
+          {/* <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />
@@ -158,7 +174,7 @@ const SignIn = () => {
                 </button>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

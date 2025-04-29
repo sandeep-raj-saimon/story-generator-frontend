@@ -1,5 +1,3 @@
-import { useNavigate } from 'react-router-dom'
-
 const API_BASE_URL = 'http://localhost:8000/api'
 
 // Store the original fetch function
@@ -25,6 +23,8 @@ window.fetch = async (input, init = {}) => {
       // Handle 401 Unauthorized
       if (response.status === 401) {
         localStorage.removeItem('accessToken')
+        localStorage.removeItem('refreshToken')
+        localStorage.removeItem('username')
         window.location.href = '/signin'
         throw new Error('Session expired. Please sign in again.')
       }
@@ -48,26 +48,6 @@ export const apiFetch = async (url, options = {}) => {
 // Export a function to initialize the interceptor
 export const initializeApiInterceptor = () => {
   console.log('API Interceptor initialized')
-}
-
-// Create a custom hook for API calls
-export const useApi = () => {
-  const navigate = useNavigate()
-
-  const apiFetchWithNavigate = async (url, options = {}) => {
-    try {
-      return await apiFetch(url, options)
-    } catch (error) {
-      if (error.message.includes('Session expired')) {
-        navigate('/signin')
-      }
-      throw error
-    }
-  }
-
-  return {
-    apiFetch: apiFetchWithNavigate
-  }
 }
 
 export default apiFetch 
