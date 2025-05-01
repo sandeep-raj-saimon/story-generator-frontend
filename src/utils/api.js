@@ -1,5 +1,5 @@
-const API_BASE_URL = 'http://localhost:8000/api'
-
+const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
+console.log('API_BASE_URL', API_BASE_URL)
 // Store the original fetch function
 const originalFetch = window.fetch
 

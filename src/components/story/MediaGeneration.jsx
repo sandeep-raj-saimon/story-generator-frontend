@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import VoiceSelectionModal from './VoiceSelectionModal'
-
+const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
 const MediaGeneration = () => {
   const { storyId } = useParams()
   const navigate = useNavigate()
@@ -37,7 +37,7 @@ const MediaGeneration = () => {
   const fetchScenes = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`http://localhost:8000/api/stories/${storyId}/scenes/`, {
+      const response = await fetch(`${API_BASE_URL}/stories/${storyId}/scenes/`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -66,7 +66,7 @@ const MediaGeneration = () => {
     try {
       setGeneratingAll(true)
       const body = selectedMediaType === 'audio' ? { voice_id: selectedVoice } : {}
-      const response = await fetch(`http://localhost:8000/api/stories/${storyId}/generate-bulk-${selectedMediaType}/`, {
+      const response = await fetch(`${API_BASE_URL}/stories/${storyId}/generate-bulk-${selectedMediaType}/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -79,7 +79,7 @@ const MediaGeneration = () => {
       }
 
       // Get all scene IDs
-      const scenesResponse = await fetch(`http://localhost:8000/api/stories/${storyId}/scenes/`, {
+      const scenesResponse = await fetch(`${API_BASE_URL}/stories/${storyId}/scenes/`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -95,7 +95,7 @@ const MediaGeneration = () => {
       const pollInterval = setInterval(async () => {
         try {
           const scenePromises = sceneIds.map(sceneId =>
-            fetch(`http://localhost:8000/api/stories/${storyId}/scenes/${sceneId}/`, {
+            fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${sceneId}/`, {
               headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
               }
@@ -161,7 +161,7 @@ const MediaGeneration = () => {
       // if(sele)
       for (const sceneId of selectedScenes) {
         promises.push(
-          fetch(`http://localhost:8000/api/stories/${storyId}/scenes/${sceneId}/generate-${selectedMediaType}/`, {
+          fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${sceneId}/generate-${selectedMediaType}/`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
@@ -182,7 +182,7 @@ const MediaGeneration = () => {
       const pollInterval = setInterval(async () => {
         try {
           const scenePromises = selectedScenes.map(sceneId =>
-            fetch(`http://localhost:8000/api/stories/${storyId}/scenes/${sceneId}/`, {
+            fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${sceneId}/`, {
               headers: {
                 'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
               }
@@ -253,7 +253,7 @@ const MediaGeneration = () => {
     const interval = setInterval(async () => {
       try {
 
-        const response = await fetch(`http://localhost:8000/api/stories/${storyId}/preview-status/${format}/`, {
+        const response = await fetch(`${API_BASE_URL}/stories/${storyId}/preview-status/${format}/`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
           }
@@ -302,7 +302,7 @@ const MediaGeneration = () => {
         ? `/stories/${storyId}/preview/${format}/${subFormat}/`
         : `/stories/${storyId}/preview-${format}/`
       
-      const response = await fetch(`http://localhost:8000/api${endpoint}`, {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`

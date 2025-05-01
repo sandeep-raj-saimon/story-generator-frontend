@@ -3,6 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import SceneEditor from './SceneEditor'
 import SceneMedia from './SceneMedia'
 
+const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
+
 const StoryDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -26,7 +28,7 @@ const StoryDetail = () => {
 
   const fetchStory = async () => {
     try {
-      const response = await fetch(`http://localhost:8000/api/stories/${id}/`, {
+      const response = await fetch(`${API_BASE_URL}/stories/${id}/`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -48,7 +50,7 @@ const StoryDetail = () => {
 
   const fetchScenes = async () => {
     try {
-      const response = await fetch(`http://localhost:8000/api/stories/${id}/scenes/`, {
+      const response = await fetch(`${API_BASE_URL}/stories/${id}/scenes/`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -76,7 +78,7 @@ const StoryDetail = () => {
     setError('')
 
     try {
-      const response = await fetch(`http://localhost:8000/api/stories/${id}/segment/`, {
+      const response = await fetch(`${API_BASE_URL}/stories/${id}/segment/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
@@ -100,7 +102,7 @@ const StoryDetail = () => {
 
   const handleGenerateMedia = async (sceneId, mediaType) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/stories/${id}/scenes/${sceneId}/generate-${mediaType}/`, {
+      const response = await fetch(`${API_BASE_URL}/stories/${id}/scenes/${sceneId}/generate-${mediaType}/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
@@ -126,7 +128,7 @@ const StoryDetail = () => {
     setError('')
 
     try {
-      const response = await fetch(`http://localhost:8000/api/stories/${id}/generate-bulk-${mediaType}/`, {
+      const response = await fetch(`${API_BASE_URL}/stories/${id}/generate-bulk-${mediaType}/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
@@ -164,7 +166,7 @@ const StoryDetail = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:8000/api/stories/${id}/scenes/${sceneId}/`, {
+      const response = await fetch(`${API_BASE_URL}/stories/${id}/scenes/${sceneId}/`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`

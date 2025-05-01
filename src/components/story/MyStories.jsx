@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-
+const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
 const MyStories = () => {
   const [stories, setStories] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -12,7 +12,7 @@ const MyStories = () => {
 
   const fetchStories = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/stories/', {
+      const response = await fetch(`${API_BASE_URL}/stories/`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }

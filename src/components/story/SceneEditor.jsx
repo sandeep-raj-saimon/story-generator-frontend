@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-
+const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
 const SceneEditor = ({ sceneId, storyId, onSave, onCancel }) => {
   const [scene, setScene] = useState({
     title: '',
@@ -18,7 +17,7 @@ const SceneEditor = ({ sceneId, storyId, onSave, onCancel }) => {
 
   const fetchScene = async () => {
     try {
-      const response = await fetch(`http://localhost:8000/api/stories/${storyId}/scenes/${sceneId}/`, {
+      const response = await fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${sceneId}/`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -43,8 +42,8 @@ const SceneEditor = ({ sceneId, storyId, onSave, onCancel }) => {
 
     try {
       const url = sceneId 
-        ? `http://localhost:8000/api/stories/${storyId}/scenes/${sceneId}/`
-        : `http://localhost:8000/api/stories/${storyId}/scenes/`
+        ? `${API_BASE_URL}/stories/${storyId}/scenes/${sceneId}/`
+        : `${API_BASE_URL}/stories/${storyId}/scenes/`
       
       const method = sceneId ? 'PUT' : 'POST'
 

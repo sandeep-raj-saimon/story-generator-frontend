@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-
+const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
 const StoryInput = () => {
   const navigate = useNavigate()
   const [title, setTitle] = useState('')
@@ -25,7 +25,7 @@ const StoryInput = () => {
     setError('')
 
     try {
-      const response = await fetch('http://localhost:8000/api/stories/', {
+      const response = await fetch(`${API_BASE_URL}/stories/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-
+const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
 const GeneratedContent = () => {
   const [generatedFiles, setGeneratedFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,7 +16,7 @@ const GeneratedContent = () => {
   const fetchGeneratedContent = async () => {
     try {
       const response = await fetch(
-        `http://localhost:8000/api/generated-content/?page=${currentPage}&page_size=${pageSize}&search=${searchTerm}`,
+        `${API_BASE_URL}/generated-content/?page=${currentPage}&page_size=${pageSize}&search=${searchTerm}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('accessToken')}`
@@ -36,32 +36,6 @@ const GeneratedContent = () => {
       console.error('Error fetching generated content:', error);
       setError('Failed to fetch generated content');
       setLoading(false);
-    }
-  };
-
-  const handleDownload = async (url, fileName) => {
-    try {
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('accessToken')}`
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to download file');
-      }
-      
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.setAttribute('download', fileName);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (error) {
-      console.error('Error downloading file:', error);
-      setError('Failed to download file');
     }
   };
 
