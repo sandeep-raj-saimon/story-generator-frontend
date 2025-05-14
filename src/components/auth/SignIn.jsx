@@ -1,15 +1,15 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useNavigate } from 'react-router-dom'
-import apiFetch from '../../utils/api'
-
+import { Link, useNavigate } from 'react-router-dom'
+import { toast, ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
+// toast.configure();
 const SignIn = () => {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   })
-  const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const handleChange = (e) => {
@@ -23,11 +23,13 @@ const SignIn = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
 
     try {
-      const response = await apiFetch('/auth/login/', {
-        method: 'POST',
+      const response = await fetch(`${API_BASE_URL}/auth/login/`, {
+        method: 'POST', 
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify(formData)
       })
 
@@ -44,7 +46,7 @@ const SignIn = () => {
       navigate('/create')
     } catch (err) {
       console.error('Sign in error:', err)
-      setError('Failed to sign in. Please check your credentials.')
+      toast('Failed to sign in. Please check your credentials.')
     } finally {
       setIsLoading(false)
     }
@@ -123,10 +125,6 @@ const SignIn = () => {
               </div>
             </div>
 
-            {error && (
-              <div className="text-red-500 text-sm text-center">{error}</div>
-            )}
-
             <div>
               <button
                 type="submit"
@@ -177,6 +175,7 @@ const SignIn = () => {
           </div> */}
         </div>
       </div>
+      <ToastContainer position="top-center" />
     </div>
   )
 }

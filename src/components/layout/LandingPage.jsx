@@ -38,6 +38,14 @@ const LandingPage = () => {
                 Sign up
               </Link>
             </div>
+            <div className="ml-3 inline-flex">
+              <Link
+                to="/pricing"
+                className="inline-flex items-center justify-center px-5 py-3 border border-transparent text-base font-medium rounded-md text-gray-600 bg-white hover:bg-gray-50"
+              >
+                View Pricing
+              </Link>
+            </div>
           </div>
         </div>
 

@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { toast, ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
 const SignUp = () => {
   const navigate = useNavigate()
@@ -9,7 +11,6 @@ const SignUp = () => {
     password: '',
     confirmPassword: '',
   })
-  const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
   const handleChange = (e) => {
@@ -23,10 +24,9 @@ const SignUp = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
-    setError('')
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match')
+      toast('Passwords do not match')
       setIsLoading(false)
       return
     }
@@ -57,7 +57,7 @@ const SignUp = () => {
       navigate('/create');
     } catch (error) {
       console.error('Sign up error:', error)
-      setError('Failed to create account. Please try again.')
+      toast('Failed to create account. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -151,11 +151,6 @@ const SignUp = () => {
                 />
               </div>
             </div>
-
-            {error && (
-              <div className="text-red-500 text-sm text-center">{error}</div>
-            )}
-
             <div>
               <button
                 type="submit"
@@ -166,7 +161,7 @@ const SignUp = () => {
               </button>
             </div>
           </form>
-            
+          <ToastContainer position="top-center" />
           {/* <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">

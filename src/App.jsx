@@ -8,6 +8,8 @@ import StoryDetail from './components/story/StoryDetail'
 import MyStories from './components/story/MyStories'
 import MediaGeneration from './components/story/MediaGeneration'
 import GeneratedContent from './components/story/GeneratedContent'
+import PricingPage from './components/pricing/PricingPage'
+// import SubscriptionManager from './components/subscription/SubscriptionManager'
 import { NavigationProvider } from './utils/navigationContext'
 
 const AppContent = () => {
@@ -29,6 +31,8 @@ const AppContent = () => {
           <Route path="/my-stories" element={<MyStories />} />
           <Route path="/stories/:storyId/media" element={<MediaGeneration />} />
           <Route path="/generated-content" element={<GeneratedContent />} />
+          {/* <Route path="/pricing" element={<PricingPage />} /> */}
+          {/* <Route path="/subscription" element={<SubscriptionManager />} /> */}
           {/* Add more routes as needed */}
         </Routes>
       </div>
