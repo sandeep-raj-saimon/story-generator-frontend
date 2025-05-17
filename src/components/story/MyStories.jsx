@@ -57,13 +57,43 @@ const MyStories = () => {
       ) : (
         <div className="grid gap-4">
           {stories.map((story) => (
-            <Link
-              key={story.id}
-              to={`/stories/${story.id}`}
-              className="block p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
-            >
-              <h2 className="text-xl font-semibold text-gray-800">{story.title}</h2>
-            </Link>
+            <div key={story.id} className="flex items-center justify-between p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow">
+              <Link
+                to={`/stories/${story.id}`}
+                className="flex-1"
+              >
+                <h2 className="text-xl font-semibold text-gray-800">{story.title}</h2>
+              </Link>
+              <button
+                onClick={async (e) => {
+                  e.preventDefault();
+                  try {
+                    const response = await fetch(`${API_BASE_URL}/stories/${story.id}/`, {
+                      method: 'PATCH',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                      },
+                      body: JSON.stringify({
+                        is_active: false
+                      })
+                    });
+                    if (response.ok) {
+                      // Refresh stories list after deletion
+                      fetchStories();
+                    } else {
+                      throw new Error('Failed to delete story');
+                    }
+                  } catch (err) {
+                    console.error('Error deleting story:', err);
+                    setError('Failed to delete story');
+                  }
+                }}
+                className="ml-4 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors duration-200"
+              >
+                Delete
+              </button>
+            </div>
           ))}
         </div>
       )}
