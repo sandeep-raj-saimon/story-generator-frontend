@@ -1,53 +1,56 @@
 import { Link } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import apiFetch from '../../utils/api'
+
 const PricingPage = () => {
   const [selectedPlan, setSelectedPlan] = useState(null)
-  const plans = [
-    {
-      id: 1,
-      name: 'Free',
-      price: 0,
-      currency: '₹',
-      credits: 300,
-      features: [
-        '300 credits per month',
-        'Basic story creation'
-      ],
-      buttonText: 'Get Started',
-      buttonLink: '/signup',
-      highlighted: false
-    },
-    {
-      id: 2,
-      name: 'Standard',
-      price: 99,
-      currency: '₹',
-      credits: 1000,
-      features: [
-        '1000 credits',
-        'Only Image generation',
-        'Export to PDF format'
-      ],
-      buttonText: 'Buy Now',
-      buttonLink: '/subscribe?plan=standard',
-      highlighted: false
-    },
-    {
-      id: 3,
-      name: 'Premium',
-      price: 249,
-      currency: '₹',
-      credits: 3000,
-      features: [
-        '3000 credits',
-        'Image and Audio generation',
-        'Export to PDF and Mp3 formats'
-      ],
-      buttonText: 'Buy Now',
-      buttonLink: '/subscribe?plan=premium',
-      highlighted: false
+  const [pricingConfig, setPricingConfig] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const fetchPricingConfig = async () => {
+      try {
+        // Get domain from window.location
+        const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'com'
+        const response = await apiFetch(`/pricing/config/?domain=${domain}`)
+        if (!response.ok) throw new Error('Failed to fetch pricing configuration')
+        
+        const data = await response.json()
+        setPricingConfig(data)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
     }
-  ]
+
+    fetchPricingConfig()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="bg-gray-100 min-h-screen py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-gray-100 min-h-screen py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center text-red-600">
+            <p>{error}</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="bg-gray-100 min-h-screen py-12">
@@ -67,7 +70,7 @@ const PricingPage = () => {
         </div>
 
         <div className="mt-12 space-y-4 sm:mt-16 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-6 lg:max-w-4xl lg:mx-auto">
-          {plans.map((plan) => (
+          {pricingConfig?.plans.map((plan) => (
             <div
               key={plan.name}
               className={`rounded-lg shadow-lg divide-y divide-gray-200 ${
@@ -75,16 +78,13 @@ const PricingPage = () => {
                   ? 'border-2 border-indigo-500 relative'
                   : 'border border-gray-200'
               }`}
-              onClick={() => {
-                console.log('plan', plan)
-                setSelectedPlan(plan)
-              }}
+              onClick={() => setSelectedPlan(plan)}
             >
               <div className="p-6">
                 <h3 className="text-2xl font-semibold text-gray-900">{plan.name}</h3>
                 <p className="mt-4">
                   <span className="text-4xl font-extrabold text-gray-900">
-                    {plan.currency}{plan.price}
+                    {pricingConfig.currency}{plan.price}
                   </span>
                   {plan.price > 0 && (
                     <span className="text-base font-medium text-gray-500"> for {plan.credits} credits</span>
@@ -94,14 +94,14 @@ const PricingPage = () => {
                   )}
                 </p>
                 <Link
-                  to={plan.buttonLink}
+                  to={plan.price === 0 ? '/signup' : `/subscribe?plan=${plan.name.toLowerCase()}`}
                   className={`mt-8 block w-full bg-${
                     selectedPlan?.id === plan.id ? 'indigo' : 'blue'
                   }-600 text-white rounded-md py-2 text-sm font-semibold text-center transition-transform transition-shadow duration-200 transform hover:scale-105 hover:shadow-2xl hover:bg-${
                     selectedPlan?.id === plan.id ? 'indigo' : 'blue'
                   }-500`}
                 >
-                  {plan.buttonText}
+                  {plan.price === 0 ? 'Get Started' : 'Buy Now'}
                 </Link>
               </div>
               <div className="pt-6 pb-8 px-6">

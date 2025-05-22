@@ -45,7 +45,7 @@ const AppContent = () => {
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/refund" element={<RefundPolicy />} />
             <Route path="/contact" element={<ContactUs />} />
-            {/* <Route path="/pricing" element={<PricingPage />} /> */}
+            <Route path="/pricing" element={<PricingPage />} />
             {/* <Route path="/subscription" element={<SubscriptionManager />} /> */}
             {/* Add more routes as needed */}
           </Routes>
