@@ -24,6 +24,7 @@ const MediaGeneration = () => {
   const [selectedVoice, setSelectedVoice] = useState(null)
   const [previewAudio, setPreviewAudio] = useState(null)
   const [isSelectedAll, setIsSelectedAll] = useState(false)
+  const MAX_SELECTED_SCENES = 3
 
   useEffect(() => {
     fetchScenes()
@@ -232,11 +233,16 @@ const MediaGeneration = () => {
   }
 
   const handleSceneSelection = (sceneId) => {
-    setSelectedScenes(prev => 
-      prev.includes(sceneId) 
-        ? prev.filter(id => id !== sceneId)
-        : [...prev, sceneId]
-    )
+    setSelectedScenes(prev => {
+      if (prev.includes(sceneId)) {
+        return prev.filter(id => id !== sceneId)
+      } else if (prev.length >= MAX_SELECTED_SCENES) {
+        setError(`You can only select up to ${MAX_SELECTED_SCENES} scenes at a time`)
+        return prev
+      } else {
+        return [...prev, sceneId]
+      }
+    })
   }
 
   const getMediaStatus = (scene) => {
@@ -335,7 +341,17 @@ const MediaGeneration = () => {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Media Generation</h2>
+          <div>
+            <h2 className="text-2xl font-bold">Media Generation</h2>
+            <div className="mt-2 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-md px-3 py-2">
+              <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm font-medium text-red-700">
+                You can select up to <span className="font-bold">{MAX_SELECTED_SCENES}</span> scenes at a time for media generation
+              </p>
+            </div>
+          </div>
           <div className="flex gap-4">
             <select
               value={selectedMediaType}
@@ -345,23 +361,6 @@ const MediaGeneration = () => {
               <option value="image">Image</option>
               <option value="audio">Audio</option>
             </select>
-            <button
-              onClick={handleGenerateAll}
-              disabled={generatingAll}
-              className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-            >
-              {generatingAll ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Generating...
-                </>
-              ) : (
-                `Generate All ${selectedMediaType.charAt(0).toUpperCase() + selectedMediaType.slice(1)}`
-              )}
-            </button>
             {selectedScenes.length > 0 && (
               <button
                 onClick={handleGenerateSelected}
@@ -377,7 +376,7 @@ const MediaGeneration = () => {
                     Generating...
                   </>
                 ) : (
-                  `Generate Selected ${selectedMediaType.charAt(0).toUpperCase() + selectedMediaType.slice(1)} (${selectedScenes.length})`
+                  `Generate ${selectedMediaType.charAt(0).toUpperCase() + selectedMediaType.slice(1)} (${selectedScenes.length}/${MAX_SELECTED_SCENES})`
                 )}
               </button>
             )}
@@ -385,17 +384,27 @@ const MediaGeneration = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 flex justify-between items-center">
+            <span>{error}</span>
+            <button 
+              onClick={() => setError(null)}
+              className="text-red-700 hover:text-red-900"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         )}
 
         <div className="space-y-8">
           {scenes.map((scene, index) => {
             const { hasImage, hasAudio } = getMediaStatus(scene)
+            const isSelected = selectedScenes.includes(scene.id)
+            const canSelect = !isSelected && selectedScenes.length < MAX_SELECTED_SCENES
             
             return (
-              <div key={scene.id} className="border rounded-lg overflow-hidden">
+              <div key={scene.id} className={`border rounded-lg overflow-hidden ${isSelected ? 'ring-2 ring-green-500' : ''}`}>
                 <div className="flex">
                   {/* Scene Section */}
                   <div className="w-1/2 p-4 border-r">
@@ -403,9 +412,10 @@ const MediaGeneration = () => {
                       <div className="flex-shrink-0">
                         <input
                           type="checkbox"
-                          checked={selectedScenes.includes(scene.id)}
+                          checked={isSelected}
                           onChange={() => handleSceneSelection(scene.id)}
-                          className="h-4 w-4 text-blue-600 rounded border-gray-300"
+                          disabled={!isSelected && !canSelect}
+                          className={`h-4 w-4 text-blue-600 rounded border-gray-300 ${!isSelected && !canSelect ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                         />
                       </div>
                       <div className="flex-grow">
