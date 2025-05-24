@@ -1,12 +1,127 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import apiFetch from '../../utils/api'
+import { toast, ToastContainer } from 'react-toastify'
+import { useNavigate } from 'react-router-dom'
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
+const RAZORPAY_KEY = import.meta.env.VITE_TEST_RAZORPAY_KEY_ID
 
 const PricingPage = () => {
+  const navigate = useNavigate()
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [pricingConfig, setPricingConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  // Load Razorpay script
+  useEffect(() => {
+    const script = document.createElement('script')
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.async = true
+    script.onload = () => {
+      console.log('Razorpay script loaded')
+    }
+    document.body.appendChild(script)
+
+    return () => {
+      document.body.removeChild(script)
+    }
+  }, [])
+
+  const initializeRazorpay = (orderData, plan_id) => {
+    console.log(orderData, RAZORPAY_KEY)
+    const options = {
+      key: RAZORPAY_KEY,
+      amount: orderData.amount * 100,
+      currency: orderData.currency,
+      name: "Story Generator",
+      description: '',
+      order_id: orderData.order_id,
+      handler: function (response) {
+        console.log('Payment successful:', response)
+        // Handle successful payment
+        verifyPayment({ ...response, order_id: orderData.order_id, plan_id: plan_id })
+      },
+      prefill: {
+        name: localStorage.getItem('userName') || '',
+        email: localStorage.getItem('userEmail') || '',
+      },
+      theme: {
+        color: "#4F46E5" // Indigo color matching our UI
+      }
+    }
+
+    const rzp = new window.Razorpay(options)
+    rzp.open()
+  }
+
+  const verifyPayment = async (response) => {
+    try {
+      const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'com'
+      const verifyResponse = await fetch(`${API_BASE_URL}/payment/verify/?domain=${domain}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        },
+        body: JSON.stringify({
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_signature: response.razorpay_signature,
+          order_id: response.order_id,
+          plan_id: response.plan_id
+        })
+      })
+      
+      if (verifyResponse.ok) {
+        const data = await verifyResponse.json()
+        toast.success(data.message, {
+          autoClose: 5000,
+          theme: "colored",
+        })
+        setTimeout(() => {
+          navigate('/')
+        }, 5000)
+      } else {
+        toast.error('Payment failed!', {
+          autoClose: 5000,
+          theme: "colored",
+        })
+      }
+    } catch (error) {
+      console.error('Error verifying payment:', error)
+    }
+  }
+
+  const handlePlanSelect = async (plan) => {
+    try {
+      setSelectedPlan(plan)
+      const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'com'
+      
+      // Create order
+      const response = await fetch(`${API_BASE_URL}/payment/create-order/?plan_id=${plan.id}&domain=${domain}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to create order')
+      }
+
+      const orderData = await response.json()
+      console.log('Order created:', orderData)
+      
+      // Initialize Razorpay with order data
+      initializeRazorpay(orderData, plan.id)
+    } catch (error) {
+      console.error('Order creation failed:', error)
+      setError(error.message)
+    }
+  }
 
   useEffect(() => {
     const fetchPricingConfig = async () => {
@@ -54,6 +169,7 @@ const PricingPage = () => {
 
   return (
     <div className="bg-gray-100 min-h-screen py-12">
+      <ToastContainer position="top-center" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
@@ -93,16 +209,18 @@ const PricingPage = () => {
                     <span className="text-base font-medium text-gray-500"> / month</span>
                   )}
                 </p>
-                <Link
+                <button
                   to={plan.price === 0 ? '/signup' : `/subscribe?plan=${plan.name.toLowerCase()}`}
                   className={`mt-8 block w-full bg-${
                     selectedPlan?.id === plan.id ? 'indigo' : 'blue'
                   }-600 text-white rounded-md py-2 text-sm font-semibold text-center transition-transform transition-shadow duration-200 transform hover:scale-105 hover:shadow-2xl hover:bg-${
                     selectedPlan?.id === plan.id ? 'indigo' : 'blue'
                   }-500`}
+                  onClick={() => handlePlanSelect(plan)}
+                  disabled={plan.price === 0 ? true : false}
                 >
                   {plan.price === 0 ? 'Get Started' : 'Buy Now'}
-                </Link>
+                </button>
               </div>
               <div className="pt-6 pb-8 px-6">
                 <h4 className="text-sm font-medium text-gray-900 tracking-wide">What's included</h4>
@@ -132,6 +250,7 @@ const PricingPage = () => {
         </div>
       </div>
     </div>
+
   )
 }
 
