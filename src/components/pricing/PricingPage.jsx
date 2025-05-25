@@ -185,7 +185,7 @@ const PricingPage = () => {
           </div>
         </div>
 
-        <div className="mt-12 space-y-4 sm:mt-16 sm:space-y-0 sm:grid sm:grid-cols-3 sm:gap-6 lg:max-w-4xl lg:mx-auto">
+        <div className="mt-12 space-y-4 sm:mt-16 sm:space-y-0 sm:grid sm:grid-cols-4 sm:gap-6 lg:max-w-4xl lg:mx-auto">
           {pricingConfig?.plans.map((plan) => (
             <div
               key={plan.name}
