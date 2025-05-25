@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import apiFetch from '../../utils/api'
 import { toast, ToastContainer } from 'react-toastify'
 import { useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
 const RAZORPAY_KEY = import.meta.env.VITE_TEST_RAZORPAY_KEY_ID
@@ -145,10 +146,15 @@ const PricingPage = () => {
 
   if (loading) {
     return (
-      <div className="bg-gray-100 min-h-screen py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex justify-center items-center min-h-[60vh]">
+            <div className="relative">
+              <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-200 border-t-indigo-600"></div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="h-8 w-8 rounded-full bg-indigo-600 animate-ping opacity-75"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -157,100 +163,185 @@ const PricingPage = () => {
 
   if (error) {
     return (
-      <div className="bg-gray-100 min-h-screen py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-red-600">
-            <p>{error}</p>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-white">
+        <div className="container mx-auto px-4 py-8">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex justify-center items-center min-h-[60vh]"
+          >
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full text-center">
+              <div className="text-red-500 mb-4">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Error</h3>
+              <p className="text-gray-600">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          </motion.div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-gray-100 min-h-screen py-12">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
       <ToastContainer position="top-center" />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center">
-          <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
-            Simple, transparent pricing
-          </h2>
-          <p className="mt-4 text-lg text-gray-600">
-            Choose the plan that best fits your needs
+      <div className="container mx-auto px-4 py-12">
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center max-w-3xl mx-auto mb-12"
+        >
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            Choose Your Plan
+          </h1>
+          <p className="text-lg text-gray-600">
+            Select the perfect plan for your creative journey. All plans include access to our AI-powered story generation platform.
           </p>
-          
-          {/* Billing Toggle */}
-          <div className="mt-6 flex justify-center">
-            {/* Billing toggle removed for INR/credit plans */}
-          </div>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+          <AnimatePresence mode="wait">
+            {pricingConfig?.plans.map((plan, index) => (
+              <motion.div
+                key={plan.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -5 }}
+                className={`relative bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 ${
+                  selectedPlan?.id === plan.id ? 'ring-2 ring-indigo-500' : ''
+                }`}
+              >
+                {plan.price === 0 && (
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-gradient-to-r from-green-400 to-green-500 text-white px-4 py-1 rounded-full text-sm font-medium shadow-lg">
+                      Free
+                    </span>
+                  </div>
+                )}
+                
+                <div className="p-8">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                  <div className="mt-4 mb-6">
+                    <span className="text-4xl font-extrabold text-gray-900">
+                      {pricingConfig.currency}{plan.price}
+                    </span>
+                    {plan.price > 0 ? (
+                      <span className="text-base font-medium text-gray-500 ml-2">
+                        for {plan.credits} credits
+                      </span>
+                    ) : (
+                      <span className="text-base font-medium text-gray-500 ml-2">
+                        / month
+                      </span>
+                    )}
+                  </div>
+
+                  { plan.price !== 0 ? <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handlePlanSelect(plan)}
+                    disabled={plan.price === 0}
+                    className={`w-full py-3 px-4 rounded-xl text-sm font-semibold text-center transition-all duration-200 ${
+                      plan.price === 0
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : selectedPlan?.id === plan.id
+                        ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                        : 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:from-indigo-600 hover:to-purple-600'
+                    }`}
+                  >
+                    {'Buy now'}
+                  </motion.button> : ''}
+
+                  <div className="mt-8">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-4">What's included:</h4>
+                    <ul className="space-y-3">
+                      {plan.features.map((feature, featureIndex) => (
+                        <motion.li
+                          key={featureIndex}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.2 + featureIndex * 0.1 }}
+                          className="flex items-start"
+                        >
+                          <svg
+                            className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                          <span className="ml-3 text-sm text-gray-600">{feature}</span>
+                        </motion.li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {selectedPlan?.id === plan.id && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute -bottom-2 left-1/2 transform -translate-x-1/2"
+                  >
+                    <div className="bg-indigo-500 text-white px-4 py-1 rounded-full text-sm font-medium shadow-lg">
+                      Selected
+                    </div>
+                  </motion.div>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
 
-        <div className="mt-12 space-y-4 sm:mt-16 sm:space-y-0 sm:grid sm:grid-cols-4 sm:gap-6 lg:max-w-4xl lg:mx-auto">
-          {pricingConfig?.plans.map((plan) => (
-            <div
-              key={plan.name}
-              className={`rounded-lg shadow-lg divide-y divide-gray-200 ${
-                selectedPlan?.id === plan.id
-                  ? 'border-2 border-indigo-500 relative'
-                  : 'border border-gray-200'
-              }`}
-              onClick={() => setSelectedPlan(plan)}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mt-16 text-center max-w-2xl mx-auto"
+        >
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Need more information?</h2>
+          <p className="text-gray-600 mb-6">
+            Check out our detailed pricing guide or contact our support team for personalized assistance.
+          </p>
+          <div className="flex justify-center space-x-4">
+            <Link
+              to="/faq"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200 transition-colors"
             >
-              <div className="p-6">
-                <h3 className="text-2xl font-semibold text-gray-900">{plan.name}</h3>
-                <p className="mt-4">
-                  <span className="text-4xl font-extrabold text-gray-900">
-                    {pricingConfig.currency}{plan.price}
-                  </span>
-                  {plan.price > 0 && (
-                    <span className="text-base font-medium text-gray-500"> for {plan.credits} credits</span>
-                  )}
-                  {plan.price === 0 && (
-                    <span className="text-base font-medium text-gray-500"> / month</span>
-                  )}
-                </p>
-                <button
-                  to={plan.price === 0 ? '/signup' : `/subscribe?plan=${plan.name.toLowerCase()}`}
-                  className={`mt-8 block w-full bg-${
-                    selectedPlan?.id === plan.id ? 'indigo' : 'blue'
-                  }-600 text-white rounded-md py-2 text-sm font-semibold text-center transition-transform transition-shadow duration-200 transform hover:scale-105 hover:shadow-2xl hover:bg-${
-                    selectedPlan?.id === plan.id ? 'indigo' : 'blue'
-                  }-500`}
-                  onClick={() => handlePlanSelect(plan)}
-                  disabled={plan.price === 0 ? true : false}
-                >
-                  {plan.price === 0 ? 'Get Started' : 'Buy Now'}
-                </button>
-              </div>
-              <div className="pt-6 pb-8 px-6">
-                <h4 className="text-sm font-medium text-gray-900 tracking-wide">What's included</h4>
-                <ul className="mt-6 space-y-4">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex space-x-3">
-                      <svg
-                        className="flex-shrink-0 h-5 w-5 text-green-500"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="text-sm text-gray-500">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          ))}
-        </div>
+              View FAQ
+              <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+            <Link
+              to="/contact"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+            >
+              Contact Support
+              <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </Link>
+          </div>
+        </motion.div>
       </div>
     </div>
-
   )
 }
 

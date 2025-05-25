@@ -43,55 +43,150 @@ const ProfilePage = () => {
         fetchUserData()
     }, [navigate])
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-3xl mx-auto">
-                    <div className="text-center">
-                        <p>Loading...</p>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    if (error) {
-        return (
-            <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-                <div className="max-w-3xl mx-auto">
-                    <div className="text-center text-red-600">
-                        <p>{error}</p>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
     return (
-        <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-3xl mx-auto">
-                <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-                    <div className="px-4 py-5 sm:px-6">
-                        <h3 className="text-lg leading-6 font-medium text-gray-900">Profile Information</h3>
-                    </div>
-                    <div className="border-t border-gray-200">
-                        <dl>
-                            <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                <dt className="text-sm font-medium text-gray-500">Username</dt>
-                                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{user?.username}</dd>
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+            {/* Animated background shapes */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob"></div>
+                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-2000"></div>
+            </div>
+
+            <div className="relative max-w-4xl mx-auto p-6">
+                <div className="animate-fade-in">
+                    <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 mb-8">
+                        Profile
+                    </h1>
+
+                    {loading ? (
+                        <div className="flex justify-center items-center py-12">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+                        </div>
+                    ) : error ? (
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between animate-shake">
+                            <span>{error}</span>
+                            <button 
+                                onClick={() => setError(null)}
+                                className="text-red-500 hover:text-red-700"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                    ) : user ? (
+                        <div className="space-y-8">
+                            {/* Profile Card */}
+                            <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-8 transform transition-all duration-300 hover:shadow-lg">
+                                <div className="flex items-center space-x-6">
+                                    <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-3xl font-bold">
+                                        {user.username.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-gray-800 mb-1">{user.username}</h2>
+                                        <p className="text-gray-600">{user.email}</p>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                <dt className="text-sm font-medium text-gray-500">Email</dt>
-                                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{user?.email}</dd>
+
+                            {/* Credits Card */}
+                            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg border border-indigo-100 p-8 transform transition-all duration-300 hover:shadow-lg">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="text-xl font-semibold text-gray-800">Available Credits</h3>
+                                    <Link
+                                        to="/pricing"
+                                        className="inline-flex items-center px-4 py-2 text-sm font-medium text-indigo-600 bg-white border border-indigo-600 rounded-md hover:bg-indigo-50 transition-colors duration-200"
+                                    >
+                                        Get More Credits
+                                        <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                        </svg>
+                                    </Link>
+                                </div>
+                                <div className="flex items-center space-x-4">
+                                    <div className="flex-1 h-4 bg-gray-200 rounded-full overflow-hidden">
+                                        <div 
+                                            className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-300"
+                                            style={{ width: `${Math.min((user.credits?.credits_remaining / 1000) * 100, 100)}%` }}
+                                        ></div>
+                                    </div>
+                                    <span className="text-2xl font-bold text-gray-800">{user.credits?.credits_remaining || 0}</span>
+                                </div>
+                                <p className="mt-2 text-sm text-gray-500">
+                                    Credits are used for generating images and audio for your stories.
+                                </p>
                             </div>
-                            <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                                <dt className="text-sm font-medium text-gray-500">Credits</dt>
-                                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{user?.credits?.credits_remaining || 0}</dd>
+
+                            {/* Quick Actions */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <Link
+                                    to="/create"
+                                    className="group bg-white rounded-lg shadow-sm border border-gray-100 p-6 transform transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+                                >
+                                    <div className="flex items-center space-x-4">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center text-white transform -rotate-6 group-hover:rotate-0 transition-transform duration-300">
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-gray-800 group-hover:text-indigo-600 transition-colors duration-200">Create New Story</h3>
+                                            <p className="text-sm text-gray-500">Start writing your next masterpiece</p>
+                                        </div>
+                                    </div>
+                                </Link>
+
+                                <Link
+                                    to="/my-stories"
+                                    className="group bg-white rounded-lg shadow-sm border border-gray-100 p-6 transform transition-all duration-300 hover:shadow-lg hover:scale-[1.02]"
+                                >
+                                    <div className="flex items-center space-x-4">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white transform rotate-6 group-hover:rotate-0 transition-transform duration-300">
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-semibold text-gray-800 group-hover:text-indigo-600 transition-colors duration-200">View My Stories</h3>
+                                            <p className="text-sm text-gray-500">Access and manage your stories</p>
+                                        </div>
+                                    </div>
+                                </Link>
                             </div>
-                        </dl>
-                    </div>
+                        </div>
+                    ) : null}
                 </div>
             </div>
+
+            {/* Add custom styles for animations */}
+            <style jsx="true">{`
+                @keyframes blob {
+                    0% { transform: translate(0px, 0px) scale(1); }
+                    33% { transform: translate(30px, -50px) scale(1.1); }
+                    66% { transform: translate(-20px, 20px) scale(0.9); }
+                    100% { transform: translate(0px, 0px) scale(1); }
+                }
+                @keyframes shake {
+                    0%, 100% { transform: translateX(0); }
+                    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                    20%, 40%, 60%, 80% { transform: translateX(5px); }
+                }
+                .animate-blob {
+                    animation: blob 7s infinite;
+                }
+                .animate-shake {
+                    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+                }
+                .animation-delay-2000 {
+                    animation-delay: 2s;
+                }
+                .animate-fade-in {
+                    animation: fadeIn 1s ease-out;
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
         </div>
     )
 }

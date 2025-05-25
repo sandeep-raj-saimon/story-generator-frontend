@@ -1,10 +1,42 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Logo from './Logo'
+
+const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
 
 const Navbar = () => {
   const navigate = useNavigate()
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [userCredits, setUserCredits] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchUserCredits()
+  }, [])
+
+  const fetchUserCredits = async () => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      if (!token) return
+
+      const response = await fetch(`${API_BASE_URL}/profile/`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user credits')
+      }
+
+      const data = await response.json()
+      setUserCredits(data.credits?.credits_remaining || 0)
+    } catch (err) {
+      console.error('Error fetching user credits:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken')
@@ -48,7 +80,22 @@ const Navbar = () => {
               </Link>
             </div>
           </div>
-          <div className="hidden sm:ml-6 sm:flex sm:items-center">
+          <div className="hidden sm:ml-6 sm:flex sm:items-center sm:space-x-4">
+            {/* Credits Display */}
+            <div className="flex items-center space-x-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-200">
+              <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-sm font-medium text-gray-700">
+                {loading ? (
+                  <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  userCredits
+                )}
+              </span>
+            </div>
+
+            {/* User Menu */}
             <div className="relative ml-3">
               <div>
                 <button
