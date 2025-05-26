@@ -24,6 +24,27 @@ const LandingPage = () => {
         {/* Hero Section */}
         <div className="text-center py-24 sm:py-32">
           <div className="space-y-4 animate-fade-in">
+            <div className="mb-12">
+              <div className="inline-flex items-center justify-center space-x-3 mb-4">
+                <div className="relative">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full blur opacity-75 animate-pulse"></div>
+                  <div className="relative bg-white p-3 rounded-full">
+                    <svg className="w-8 h-8 text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                  </div>
+                </div>
+                <h2 className="text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 sm:text-5xl">
+                  Whispr<span className="text-indigo-600">TALES</span>
+                </h2>
+              </div>
+              <div className="relative">
+                <div className="absolute -inset-x-20 top-1/2 h-px bg-gradient-to-r from-transparent via-indigo-600 to-transparent opacity-50"></div>
+                <p className="relative text-lg font-medium text-gray-600 sm:text-xl">
+                  Where Stories Come to Life with AI
+                </p>
+              </div>
+            </div>
             <h1 className="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 sm:text-6xl sm:tracking-tight lg:text-7xl">
               Create Amazing Stories
             </h1>
@@ -135,6 +156,10 @@ const LandingPage = () => {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-15px); }
         }
+        @keyframes pulse {
+          0%, 100% { opacity: 0.75; }
+          50% { opacity: 0.5; }
+        }
         .animate-blob {
           animation: blob 7s infinite;
         }
@@ -143,6 +168,9 @@ const LandingPage = () => {
         }
         .animate-float-slower {
           animation: float-slower 8s ease-in-out infinite;
+        }
+        .animate-pulse {
+          animation: pulse 3s ease-in-out infinite;
         }
         .animation-delay-2000 {
           animation-delay: 2s;
