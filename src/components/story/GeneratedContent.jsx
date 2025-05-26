@@ -188,7 +188,7 @@ const GeneratedContent = () => {
               exit={{ opacity: 0 }}
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             >
-              {generatedFiles.map((file) => (
+              {generatedFiles.map((file, index) => (
                 <motion.div
                   key={file.id}
                   initial={{ opacity: 0, y: 20 }}
@@ -207,7 +207,7 @@ const GeneratedContent = () => {
                         {file.type.toUpperCase()}
                       </span>
                     </div>
-                    
+                    <span className="text-sm text-purple-500 font-medium">Revision Number: {index+1}</span>
                     <div className="space-y-2 text-sm text-gray-600 mb-4">
                       <p className="flex items-center">
                         <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
