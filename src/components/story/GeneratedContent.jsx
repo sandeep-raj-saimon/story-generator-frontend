@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
 
 const GeneratedContent = () => {
-  const [generatedFiles, setGeneratedFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,6 +11,9 @@ const GeneratedContent = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [pageSize] = useState(10);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [fileToDelete, setFileToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [generatedFiles, setGeneratedFiles] = useState([]);
 
   useEffect(() => {
     fetchGeneratedContent();
@@ -50,6 +52,32 @@ const GeneratedContent = () => {
 
   const handlePageChange = (newPage) => {
     setCurrentPage(newPage);
+  };
+
+  const handleDelete = async (file) => {
+    try {
+      setIsDeleting(true);
+      const response = await fetch(`${API_BASE_URL}/generated-content/${file.id}/`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      })
+
+
+      if (!response.ok) {
+        throw new Error('Failed to delete the content');
+      }
+
+      // Refresh the content after successful deletion
+      await fetchGeneratedContent();
+      setFileToDelete(null);
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      setError('Failed to delete file');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (loading) {
@@ -219,6 +247,15 @@ const GeneratedContent = () => {
                         </svg>
                         Download
                       </button>
+                      <button
+                        onClick={() => setFileToDelete(file)}
+                        className="px-3 py-1.5 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors flex items-center"
+                      >
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                      </button>
                     </div>
                   </div>
                 </motion.div>
@@ -302,6 +339,58 @@ const GeneratedContent = () => {
                       <p className="text-gray-500">Preview not available for this file type</p>
                     </div>
                   )}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Delete Confirmation Modal */}
+        <AnimatePresence>
+          {fileToDelete && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl"
+              >
+                <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                  Delete {fileToDelete.type.toUpperCase()}
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to delete "{fileToDelete.name}"? This action cannot be undone.
+                </p>
+                <div className="flex justify-end space-x-4">
+                  <button
+                    onClick={() => setFileToDelete(null)}
+                    disabled={isDeleting}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleDelete(fileToDelete)}
+                    disabled={isDeleting}
+                    className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Deleting...
+                      </>
+                    ) : (
+                      'Delete File'
+                    )}
+                  </button>
                 </div>
               </motion.div>
             </motion.div>

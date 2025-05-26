@@ -21,6 +21,8 @@ const StoryDetail = () => {
   const [selectedSceneForMedia, setSelectedSceneForMedia] = useState(null)
   const [showBulkMediaDialog, setShowBulkMediaDialog] = useState(false)
   const [isGeneratingBulkMedia, setIsGeneratingBulkMedia] = useState(false)
+  const [sceneToDelete, setSceneToDelete] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     fetchStory()
@@ -162,11 +164,8 @@ const StoryDetail = () => {
   }
 
   const handleDeleteScene = async (sceneId) => {
-    if (!window.confirm('Are you sure you want to delete this scene?')) {
-      return
-    }
-
     try {
+      setIsDeleting(true)
       const response = await fetch(`${API_BASE_URL}/stories/${id}/scenes/${sceneId}/`, {
         method: 'DELETE',
         headers: {
@@ -179,9 +178,12 @@ const StoryDetail = () => {
       }
 
       await fetchScenes()
+      setSceneToDelete(null)
     } catch (err) {
       console.error('Delete scene error:', err)
       setError('Failed to delete scene')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -196,346 +198,245 @@ const StoryDetail = () => {
   }
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex justify-center items-center min-h-[60vh]">
-            <div className="relative">
-              <div className="animate-spin rounded-full h-16 w-16 border-4 border-indigo-200 border-t-indigo-600"></div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-8 w-8 rounded-full bg-indigo-600 animate-ping opacity-75"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
+    return <div className="text-center p-4">Loading story...</div>
   }
 
   if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-white">
-        <div className="container mx-auto px-4 py-8">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex justify-center items-center min-h-[60vh]"
-          >
-            <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full text-center">
-              <div className="text-red-500 mb-4">
-                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Error</h3>
-              <p className="text-gray-600">{error}</p>
-              <button
-                onClick={() => window.location.reload()}
-                className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-              >
-                Try Again
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-    )
+    return <div className="text-center p-4 text-red-500">{error}</div>
   }
 
   if (!story) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-        <div className="container mx-auto px-4 py-8">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex justify-center items-center min-h-[60vh]"
-          >
-            <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full text-center">
-              <div className="text-indigo-500 mb-4">
-                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Story Not Found</h3>
-              <p className="text-gray-600 mb-4">The story you're looking for doesn't exist or has been removed.</p>
-              <button
-                onClick={() => navigate('/stories')}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-              >
-                Back to Stories
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-    )
+    return <div className="text-center p-4">Story not found</div>
   }
 
   if (isEditingScene) {
     return (
-      <motion.div
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -20 }}
-      >
-        <SceneEditor
-          sceneId={currentScene?.id}
-          storyId={id}
-          onSave={handleSaveScene}
-          onCancel={handleCancelEdit}
-        />
-      </motion.div>
+      <SceneEditor
+        sceneId={currentScene?.id}
+        storyId={id}
+        onSave={handleSaveScene}
+        onCancel={handleCancelEdit}
+      />
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white">
-      <div className="container mx-auto px-4 py-12">
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="max-w-4xl mx-auto"
-        >
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-2">
-                {story.title}
-              </h1>
-              <p className="text-gray-600">Created on {new Date(story.created_at).toLocaleDateString()}</p>
-            </div>
-            <div className="flex space-x-4">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={handleSegmentStory}
-                disabled={isSegmenting || isSegmentingDone}
-                className={`px-6 py-3 rounded-xl text-sm font-semibold text-center transition-all duration-200 ${
-                  isSegmenting || isSegmentingDone
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:from-indigo-600 hover:to-purple-600'
-                }`}
-              >
-                {isSegmenting ? (
+    <div className="max-w-4xl mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">{story.title}</h1>
+        <div className="flex space-x-4">
+          <button
+            onClick={handleSegmentStory}
+            disabled={isSegmenting || isSegmentingDone}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {isSegmenting ? 'Segmenting...' : 'Segment Story'}
+          </button>
+          {/* {scenes.length > 0 && (
+            <button
+              onClick={() => setShowBulkMediaDialog(true)}
+              className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700"
+            >
+              Generate All Media
+            </button>
+          )} */}
+        </div>
+      </div>
+
+      <div className="prose max-w-none mb-8">
+        <p className="whitespace-pre-wrap">{story.content}</p>
+      </div>
+
+      {scenes.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold mb-4">Scenes</h2>
+          <div className="space-y-6">
+            {scenes.map((scene, index) => (
+              <div key={scene.id} className="border rounded-lg p-6 bg-white shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Segmenting...
+                    <div className="flex-shrink-0 w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                      <span className="text-indigo-600 font-semibold">{index + 1}</span>
+                    </div>
+                    <h3 className="ml-4 text-xl font-semibold text-gray-800">{scene.title}</h3>
                   </div>
-                ) : (
-                  'Segment Story'
-                )}
-              </motion.button>
-            </div>
+                  <div className="flex space-x-2">
+                    {/* <button
+                      onClick={() => {
+                        setSelectedSceneForMedia(scene)
+                        setShowMediaDialog(true)
+                      }}
+                      className="px-3 py-1 text-sm text-green-600 hover:text-green-800"
+                    >
+                      Generate Media
+                    </button> */}
+                    <button
+                      onClick={() => handleEditScene(scene)}
+                      className="px-3 py-1 text-sm text-indigo-600 hover:text-indigo-800"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => setSceneToDelete(scene)}
+                      className="px-3 py-1 text-sm text-red-600 hover:text-red-800"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+                <div className="pl-14">
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Scene Content</h4>
+                    <p className="text-gray-700 whitespace-pre-wrap">{scene.content}</p>
+                  </div>
+                  <div className="mb-4">
+                    <h4 className="text-sm font-medium text-gray-500 mb-1">Description</h4>
+                    <p className="text-gray-600 italic">{scene.scene_description}</p>
+                  </div>
+                  
+                  {/* Media Display Section */}
+                  <SceneMedia scene={scene} index={index} />
+                </div>
+              </div>
+            ))}
           </div>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="bg-white rounded-2xl shadow-sm p-8 mb-8"
-          >
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Story Content</h2>
-            <div className="prose max-w-none">
-              <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{story.content}</p>
-            </div>
-          </motion.div>
-
-          {scenes.length > 0 && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="space-y-8"
+          <div className="mt-8 flex justify-end space-x-4">
+            <button
+              onClick={handleCreateScene}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
             >
-              <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  Scenes
-                </h2>
-              </div>
+              Create New Scene
+            </button>
+            <button
+              onClick={() => navigate(`/stories/${id}/media`)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+            >
+              Move to Media Generation
+            </button>
+          </div>
+        </div>
+      )}
 
-              <AnimatePresence mode="wait">
-                {scenes.map((scene, index) => (
-                  <motion.div
-                    key={scene.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ delay: index * 0.1 }}
-                    className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden"
-                  >
-                    <div className="p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-md">
-                            <span className="text-white font-bold text-lg">{index + 1}</span>
-                          </div>
-                          <h3 className="ml-4 text-xl font-semibold text-gray-800">{scene.title}</h3>
-                        </div>
-                        <div className="flex space-x-2">
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleEditScene(scene)}
-                            className="px-4 py-2 text-sm text-indigo-600 hover:text-indigo-800 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
-                          >
-                            Edit
-                          </motion.button>
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleDeleteScene(scene.id)}
-                            className="px-4 py-2 text-sm text-red-600 hover:text-red-800 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-                          >
-                            Delete
-                          </motion.button>
-                        </div>
-                      </div>
-                      <div className="pl-16 space-y-4">
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-500 mb-2">Scene Content</h4>
-                          <p className="text-gray-700 whitespace-pre-wrap bg-gray-50 rounded-lg p-4">{scene.content}</p>
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-medium text-gray-500 mb-2">Description</h4>
-                          <p className="text-gray-600 italic bg-gray-50 rounded-lg p-4">{scene.scene_description}</p>
-                        </div>
-                        
-                        <SceneMedia scene={scene} index={index} />
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+      {/* Media Generation Dialog */}
+      {showMediaDialog && selectedSceneForMedia && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Generate Media for Scene {scenes.findIndex(s => s.id === selectedSceneForMedia.id) + 1}
+            </h3>
+            <div className="space-y-4">
+              <button
+                onClick={() => handleGenerateMedia(selectedSceneForMedia.id, 'image')}
+                className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
+                Generate Image
+              </button>
+              <button
+                onClick={() => handleGenerateMedia(selectedSceneForMedia.id, 'audio')}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                Generate Audio
+              </button>
+              <button
+                onClick={() => {
+                  setShowMediaDialog(false)
+                  setSelectedSceneForMedia(null)
+                }}
+                className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-              <div className="flex justify-end space-x-4 pt-6 border-t border-gray-100">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleCreateScene}
-                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-colors"
+      {/* Bulk Media Generation Dialog */}
+      {showBulkMediaDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Generate Media for All Scenes
+            </h3>
+            <div className="space-y-4">
+              <button
+                onClick={() => handleGenerateBulkMedia('image')}
+                disabled={isGeneratingBulkMedia}
+                className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
+              >
+                {isGeneratingBulkMedia ? 'Generating Images...' : 'Generate All Images'}
+              </button>
+              <button
+                onClick={() => handleGenerateBulkMedia('audio')}
+                disabled={isGeneratingBulkMedia}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isGeneratingBulkMedia ? 'Generating Audio...' : 'Generate All Audio'}
+              </button>
+              <button
+                onClick={() => setShowBulkMediaDialog(false)}
+                disabled={isGeneratingBulkMedia}
+                className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {sceneToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl"
+            >
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">
+                Delete Scene
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete scene "{sceneToDelete.title}"? This action cannot be undone.
+              </p>
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => setSceneToDelete(null)}
+                  disabled={isDeleting}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Create New Scene
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => navigate(`/stories/${id}/media`)}
-                  className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-colors"
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteScene(sceneToDelete.id)}
+                  disabled={isDeleting}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 >
-                  Move to Media Generation
-                </motion.button>
+                  {isDeleting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete Scene'
+                  )}
+                </button>
               </div>
             </motion.div>
-          )}
-
-          {/* Media Generation Dialog */}
-          <AnimatePresence>
-            {showMediaDialog && selectedSceneForMedia && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-              >
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  className="bg-white rounded-2xl p-8 max-w-md w-full mx-4"
-                >
-                  <h3 className="text-xl font-semibold text-gray-900 mb-6">
-                    Generate Media for Scene {scenes.findIndex(s => s.id === selectedSceneForMedia.id) + 1}
-                  </h3>
-                  <div className="space-y-4">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleGenerateMedia(selectedSceneForMedia.id, 'image')}
-                      className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-colors"
-                    >
-                      Generate Image
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleGenerateMedia(selectedSceneForMedia.id, 'audio')}
-                      className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-colors"
-                    >
-                      Generate Audio
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => {
-                        setShowMediaDialog(false)
-                        setSelectedSceneForMedia(null)
-                      }}
-                      className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
-                    >
-                      Cancel
-                    </motion.button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Bulk Media Generation Dialog */}
-          <AnimatePresence>
-            {showBulkMediaDialog && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-              >
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  className="bg-white rounded-2xl p-8 max-w-md w-full mx-4"
-                >
-                  <h3 className="text-xl font-semibold text-gray-900 mb-6">
-                    Generate Media for All Scenes
-                  </h3>
-                  <div className="space-y-4">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleGenerateBulkMedia('image')}
-                      disabled={isGeneratingBulkMedia}
-                      className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:from-green-600 hover:to-green-700 transition-colors disabled:opacity-50"
-                    >
-                      {isGeneratingBulkMedia ? 'Generating Images...' : 'Generate All Images'}
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => handleGenerateBulkMedia('audio')}
-                      disabled={isGeneratingBulkMedia}
-                      className="w-full px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-colors disabled:opacity-50"
-                    >
-                      {isGeneratingBulkMedia ? 'Generating Audio...' : 'Generate All Audio'}
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setShowBulkMediaDialog(false)}
-                      disabled={isGeneratingBulkMedia}
-                      className="w-full px-4 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
-                    >
-                      Cancel
-                    </motion.button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
