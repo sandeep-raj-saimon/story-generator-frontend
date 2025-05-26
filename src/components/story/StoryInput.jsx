@@ -10,6 +10,8 @@ const StoryInput = () => {
   const [wordCount, setWordCount] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
 
   const handleTitleChange = (e) => {
     setTitle(e.target.value)
@@ -56,6 +58,37 @@ const StoryInput = () => {
     }
   }
 
+  const handleGenerateStory = async () => {
+    setIsGenerating(true)
+    setError('')
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/stories/generate/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to generate story')
+      }
+
+      const data = await response.json()
+      setTitle(data.title)
+      setContent(data.content)
+      setWordCount(data.content.trim().split(/\s+/).length)
+      setIsDialogOpen(false)
+    } catch (err) {
+      console.error('Generate story error:', err)
+      setError(err.message)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       {/* Animated background shapes */}
@@ -66,10 +99,62 @@ const StoryInput = () => {
 
       <div className="relative max-w-4xl mx-auto p-6">
         <div className="animate-fade-in">
-          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 mb-8">
-            Create Your Story
-          </h1>
-          
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+              Create Your Story
+            </h1>
+            <button
+              onClick={() => setIsDialogOpen(true)}
+              className="p-2 rounded-full hover:bg-indigo-100 transition-colors duration-200"
+              title="Need help getting started?"
+            >
+              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Dialog */}
+          {isDialogOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 transform transition-all">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-xl font-semibold text-gray-900">Don't know where to start?</h3>
+                  <button
+                    onClick={() => setIsDialogOpen(false)}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <p className="text-gray-600 mb-6">
+                  Let us help you get started! Click the button below to generate a story idea with a title and content.
+                </p>
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleGenerateStory}
+                    disabled={isGenerating}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isGenerating ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Generating...
+                      </>
+                    ) : (
+                      'Generate Story'
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSaveStory} className="space-y-6">
             <div className="group">
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
