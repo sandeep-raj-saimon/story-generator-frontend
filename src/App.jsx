@@ -5,6 +5,8 @@ import LandingPage from './components/layout/LandingPage'
 import StoryInput from './components/story/StoryInput'
 import SignIn from './components/auth/SignIn'
 import SignUp from './components/auth/SignUp'
+import ForgotPassword from './components/auth/ForgotPassword'
+import ResetPassword from './components/auth/ResetPassword'
 import StoryDetail from './components/story/StoryDetail'
 import MyStories from './components/story/MyStories'
 import MediaGeneration from './components/story/MediaGeneration'
@@ -22,7 +24,8 @@ const AppContent = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const isLandingPage = location.pathname === '/'
-  const isAuthPage = location.pathname === '/signin' || location.pathname === '/signup'
+  const isAuthPage = location.pathname === '/signin' || location.pathname === '/signup' || 
+                    location.pathname === '/forgot-password' || location.pathname.startsWith('/reset-password')
   const isLegalPage = location.pathname === '/terms' || location.pathname === '/privacy' || 
                      location.pathname === '/refund' || location.pathname === '/contact'
 
@@ -36,6 +39,8 @@ const AppContent = () => {
             <Route path="/create" element={<StoryInput />} />
             <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/stories/:id" element={<StoryDetail />} />
             <Route path="/my-stories" element={<MyStories />} />
             <Route path="/stories/:storyId/media" element={<MediaGeneration />} />
