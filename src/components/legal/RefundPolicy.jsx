@@ -9,7 +9,7 @@ const RefundPolicy = () => {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">1. Credit Purchases</h2>
           <p className="mb-4">
-            Credits purchased on Story Generator are non-refundable once used. However, unused credits 
+            Credits purchased on WhisprTales are non-refundable once used. However, unused credits 
             may be eligible for a refund under certain circumstances.
           </p>
         </section>
@@ -53,7 +53,7 @@ const RefundPolicy = () => {
             To request a refund:
           </p>
           <ol className="list-decimal pl-6 mb-4">
-            <li>Contact our support team at support@storygenerator.com</li>
+            <li>Contact our support team at support@whisprtales.com</li>
             <li>Include your account email and order details</li>
             <li>Specify the reason for your refund request</li>
             <li>Allow up to 5 business days for processing</li>

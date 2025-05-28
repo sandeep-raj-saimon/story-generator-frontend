@@ -36,7 +36,7 @@ const PricingPage = () => {
       key: RAZORPAY_KEY,
       amount: orderData.amount * 100,
       currency: orderData.currency,
-      name: "Story Generator",
+      name: "WhisprTales",
       description: '',
       order_id: orderData.order_id,
       handler: function (response) {

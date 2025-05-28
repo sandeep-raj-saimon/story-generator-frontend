@@ -93,7 +93,7 @@ const PrivacyPolicy = () => {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">9. Contact Us</h2>
           <p className="mb-4">
-            If you have any questions about this Privacy Policy, please contact us at privacy@storygenerator.com
+            If you have any questions about this Privacy Policy, please contact us at privacy@whisprtales.com
           </p>
         </section>
 

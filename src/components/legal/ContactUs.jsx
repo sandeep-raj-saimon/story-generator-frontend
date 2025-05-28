@@ -58,9 +58,9 @@ const ContactUs = () => {
               <div>
                 <h3 className="text-lg font-semibold">Email Support</h3>
                 <p className="text-gray-600">
-                  For general inquiries: support@storygenerator.com<br />
-                  For technical support: tech@storygenerator.com<br />
-                  For business inquiries: business@storygenerator.com
+                  For general inquiries: support@whisprtales.com<br />
+                  For technical support: tech@whisprtales.com<br />
+                  For business inquiries: business@whisprtales.com
                 </p>
               </div>
               

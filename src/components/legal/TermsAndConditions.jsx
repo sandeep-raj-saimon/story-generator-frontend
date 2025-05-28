@@ -9,7 +9,7 @@ const TermsAndConditions = () => {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">1. Acceptance of Terms</h2>
           <p className="mb-4">
-            By accessing and using Story Generator, you agree to be bound by these Terms and Conditions. 
+            By accessing and using WhisprTales, you agree to be bound by these Terms and Conditions. 
             If you do not agree to these terms, please do not use our service.
           </p>
         </section>
@@ -17,7 +17,7 @@ const TermsAndConditions = () => {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">2. Service Description</h2>
           <p className="mb-4">
-            Story Generator is an AI-powered platform that helps users create stories, generate images, 
+            WhisprTales is an AI-powered platform that helps users create stories, generate images, 
             and produce audio content. Our service includes various features such as story creation, 
             image generation, and audio narration.
           </p>
@@ -73,7 +73,7 @@ const TermsAndConditions = () => {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">8. Limitation of Liability</h2>
           <p className="mb-4">
-            Story Generator is provided "as is" without any warranties. We are not liable for any damages 
+            WhisprTales is provided "as is" without any warranties. We are not liable for any damages 
             arising from the use or inability to use our service.
           </p>
         </section>
@@ -81,7 +81,7 @@ const TermsAndConditions = () => {
         <section className="mb-8">
           <h2 className="text-2xl font-semibold mb-4">9. Contact Information</h2>
           <p className="mb-4">
-            For any questions regarding these Terms and Conditions, please contact us at support@storygenerator.com
+            For any questions regarding these Terms and Conditions, please contact us at support@whisprtales.com
           </p>
         </section>
 

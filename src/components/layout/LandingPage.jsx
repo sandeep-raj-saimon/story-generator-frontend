@@ -49,7 +49,7 @@ const LandingPage = () => {
               Create Amazing Stories
             </h1>
             <p className="mt-6 max-w-2xl mx-auto text-xl text-gray-600 leading-relaxed">
-              Transform your ideas into captivating stories with our AI-powered story generator.
+              Transform your ideas into captivating stories with our AI-powered WhisprTales.
               <span className="block mt-2 text-indigo-600 font-medium">Where imagination meets technology.</span>
             </p>
             <div className="mt-10 flex flex-col sm:flex-row justify-center gap-4">

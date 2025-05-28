@@ -8,7 +8,7 @@ const Footer = () => {
           <div>
             <h3 className="text-sm font-semibold text-gray-400 tracking-wider uppercase">About</h3>
             <p className="mt-4 text-base text-gray-500">
-              Story Generator helps you create amazing stories with AI-powered tools for text, image, and audio generation.
+              WhisprTales helps you create amazing stories with AI-powered tools for text, image, and audio generation.
             </p>
           </div>
           
@@ -62,7 +62,7 @@ const Footer = () => {
         
         <div className="mt-8 border-t border-gray-200 pt-8">
           <p className="text-base text-gray-400 text-center">
-            © {new Date().getFullYear()} Story Generator. All rights reserved.
+            © {new Date().getFullYear()} WhisprTales. All rights reserved.
           </p>
         </div>
       </div>

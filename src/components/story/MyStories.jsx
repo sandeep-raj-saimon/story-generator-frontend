@@ -256,7 +256,7 @@ const MyStories = () => {
               </button>
             </div>
             <p className="text-gray-600 mb-6">
-              This is a default story that has been added for smooth onboarding. Feel free to explore it to understand how the story generator works!
+              This is a default story that has been added for smooth onboarding. Feel free to explore it to understand how the WhisprTales works!
             </p>
             <div className="flex justify-end">
               <button
