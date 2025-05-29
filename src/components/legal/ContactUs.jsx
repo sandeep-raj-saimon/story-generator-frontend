@@ -74,7 +74,12 @@ const ContactUs = () => {
                   We typically respond to all inquiries within 24-48 hours during business days.
                 </p>
               </div>
-              
+              <div>
+                <h3 className="text-lg font-semibold">Office Address</h3>
+                <p className="text-gray-600">
+                  Hyderabad, India - 500056
+                </p>
+              </div>
               <div>
                 <h3 className="text-lg font-semibold">Office Hours</h3>
                 <p className="text-gray-600">
