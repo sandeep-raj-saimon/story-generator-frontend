@@ -59,7 +59,7 @@ const PricingPage = () => {
 
   const verifyPayment = async (response) => {
     try {
-      const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'in'
+      const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'com'
       const verifyResponse = await fetch(`${API_BASE_URL}/payment/verify/?domain=${domain}`, {
         method: 'POST',
         headers: {
@@ -98,7 +98,7 @@ const PricingPage = () => {
   const handlePlanSelect = async (plan) => {
     try {
       setSelectedPlan(plan)
-      const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'in'
+      const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'com'
       
       // Create order
       const response = await fetch(`${API_BASE_URL}/payment/create-order/?plan_id=${plan.id}&domain=${domain}`, {
@@ -128,7 +128,7 @@ const PricingPage = () => {
     const fetchPricingConfig = async () => {
       try {
         // Get domain from window.location
-        const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'in'
+        const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'com'
         const response = await apiFetch(`/pricing/config/?domain=${domain}`)
         if (!response.ok) throw new Error('Failed to fetch pricing configuration')
         
