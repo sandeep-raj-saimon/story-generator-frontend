@@ -94,7 +94,8 @@ const RefundPolicy = () => {
                     'Contact our support team within 14 days of purchase',
                     'Provide your account details and transaction information',
                     'Explain the reason for your refund request',
-                    'Allow up to 5 business days for review'
+                    'Allow up to 5 business days for review',
+                    'Refunds will be processed within 7 working days'
                   ].map((item, index) => (
                     <motion.li 
                       key={index}
