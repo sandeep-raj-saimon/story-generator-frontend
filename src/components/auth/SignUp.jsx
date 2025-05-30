@@ -9,6 +9,7 @@ const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
 // Validation rules
 const validationRules = {
   name: {
+    id: 1,
     required: true,
     minLength: 3,
     maxLength: 30,
@@ -19,6 +20,7 @@ const validationRules = {
     })
   },
   email: {
+    id: 2,
     required: true,
     pattern: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
     validate: (value) => ({
@@ -27,6 +29,7 @@ const validationRules = {
     })
   },
   password: {
+    id: 3,
     required: true,
     minLength: 8,
     validate: (value) => {
@@ -43,6 +46,7 @@ const validationRules = {
     }
   },
   confirmPassword: {
+    id: 4,
     required: true,
     validate: (value, formData) => ({
       isValid: value === formData.password,
@@ -81,10 +85,12 @@ const SignUp = () => {
       return { isValid: false, message: `Must be no more than ${rules.maxLength} characters` }
     }
 
+    // First check pattern if it exists
     if (rules.pattern && !rules.pattern.test(value)) {
-      return { isValid: false, message: rules.validate(value).message }
+      return { isValid: false, message: 'Username can only contain letters, numbers, underscores, and hyphens' }
     }
 
+    // Then run custom validation if it exists
     if (rules.validate) {
       return rules.validate(value, formData)
     }
@@ -115,12 +121,19 @@ const SignUp = () => {
       ...prev,
       [name]: true
     }))
-
     const validation = validateField(name, value)
-    setErrors(prev => ({
-      ...prev,
-      [name]: validation.message
-    }))
+    if (!validation.isValid) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: validation.message
+      }))
+    } else {
+      setErrors(prev => {
+        const newErrors = { ...prev }
+        delete newErrors[name]
+        return newErrors
+      })
+    }
   }
 
   const validateForm = () => {
@@ -180,6 +193,13 @@ const SignUp = () => {
 
       if (!response.ok) {
         const data = await response.json();
+        // Handle DRF validation errors
+        if (data.username || data.email) {
+          const errors = [];
+          if (data.username) errors.push(data.username[0]);
+          if (data.email) errors.push(data.email[0]);
+          throw new Error(errors.join('. '));
+        }
         throw new Error(data.error || 'Registration failed');
       }
 
@@ -187,10 +207,9 @@ const SignUp = () => {
       localStorage.setItem('accessToken', data.access);
       localStorage.setItem('refreshToken', data.refresh);
       localStorage.setItem('username', JSON.stringify(data.user.username));
-      // navigate('/create');
+      navigate('/create');
     } catch (error) {
-      console.error('Sign up error:', error)
-      toast.error('Failed to create account. Please try again.', {
+      toast.error(error.message, {
         position: "top-center",
         autoClose: 5000,
         hideProgressBar: false,
@@ -199,9 +218,9 @@ const SignUp = () => {
         draggable: true,
         progress: undefined,
         theme: "colored",
-      })
+      });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -263,7 +282,7 @@ const SignUp = () => {
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={getInputClassName('name')}
-                    placeholder="Choose a username"
+                    placeholder="Choose a unqiue username"
                   />
                   {touched.name && errors.name && (
                     <motion.p 
