@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, reverseEasing } from 'framer-motion'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
-const RAZORPAY_KEY = import.meta.env.VITE_PROD_RAZORPAY_KEY_ID
+const RAZORPAY_KEY = import.meta.env.VITE_TEST_RAZORPAY_KEY_ID
 
 const PricingPage = () => {
   const navigate = useNavigate()
@@ -62,7 +62,7 @@ const PricingPage = () => {
 
   const verifyPayment = async (response) => {
     try {
-      const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'com' : 'com'
+      const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'com'
       const verifyResponse = await fetch(`${API_BASE_URL}/payment/verify/?domain=${domain}`, {
         method: 'POST',
         headers: {
@@ -126,8 +126,9 @@ const PricingPage = () => {
           })
         }
       } else {
+        const errorMessage = (await response.json())['error']
         setDiscountApplied(false)
-        toast.error('Invalid referral code', {
+        toast.error(`${errorMessage}`, {
           position: "top-center",
           autoClose: 5000,
           hideProgressBar: false,
@@ -156,7 +157,7 @@ const PricingPage = () => {
   const handlePlanSelect = async (plan) => {
     try {
       setSelectedPlan(plan)
-      const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'com' : 'com'
+      const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'com'
       console.log('discountApplied', discountApplied)
       // Create order with referral code if applied
       const response = await fetch(`${API_BASE_URL}/payment/create-order/?plan_id=${plan.id}&domain=${domain}`, {
@@ -190,7 +191,7 @@ const PricingPage = () => {
     const fetchPricingConfig = async () => {
       try {
         // Get domain from window.location
-        const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'com' : 'com'
+        const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'com'
         const response = await apiFetch(`/pricing/config/?domain=${domain}`)
         if (!response.ok) throw new Error('Failed to fetch pricing configuration')
         
