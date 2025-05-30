@@ -6,6 +6,51 @@ import 'react-toastify/dist/ReactToastify.css'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
 
+// Validation rules
+const validationRules = {
+  name: {
+    required: true,
+    minLength: 3,
+    maxLength: 30,
+    pattern: /^[a-zA-Z0-9_-]+$/,
+    validate: (value) => ({
+      isValid: /^[a-zA-Z0-9_-]+$/.test(value),
+      message: 'Username can only contain letters, numbers, underscores, and hyphens'
+    })
+  },
+  email: {
+    required: true,
+    pattern: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+    validate: (value) => ({
+      isValid: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(value),
+      message: 'Please enter a valid email address'
+    })
+  },
+  password: {
+    required: true,
+    minLength: 8,
+    validate: (value) => {
+      const hasUpperCase = /[A-Z]/.test(value)
+      const hasLowerCase = /[a-z]/.test(value)
+      const hasNumbers = /\d/.test(value)
+      const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(value)
+      const isValid = hasUpperCase && hasLowerCase && hasNumbers && hasSpecialChar
+      
+      return {
+        isValid,
+        message: isValid ? '' : 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+      }
+    }
+  },
+  confirmPassword: {
+    required: true,
+    validate: (value, formData) => ({
+      isValid: value === formData.password,
+      message: 'Passwords do not match'
+    })
+  }
+}
+
 const SignUp = () => {
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
@@ -14,9 +59,38 @@ const SignUp = () => {
     password: '',
     confirmPassword: '',
   })
+  const [errors, setErrors] = useState({})
+  const [touched, setTouched] = useState({})
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+
+  const validateField = (name, value) => {
+    const rules = validationRules[name]
+    if (!rules) return { isValid: true, message: '' }
+
+    if (rules.required && !value) {
+      return { isValid: false, message: 'This field is required' }
+    }
+
+    if (rules.minLength && value.length < rules.minLength) {
+      return { isValid: false, message: `Must be at least ${rules.minLength} characters` }
+    }
+
+    if (rules.maxLength && value.length > rules.maxLength) {
+      return { isValid: false, message: `Must be no more than ${rules.maxLength} characters` }
+    }
+
+    if (rules.pattern && !rules.pattern.test(value)) {
+      return { isValid: false, message: rules.validate(value).message }
+    }
+
+    if (rules.validate) {
+      return rules.validate(value, formData)
+    }
+
+    return { isValid: true, message: '' }
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -24,14 +98,59 @@ const SignUp = () => {
       ...prev,
       [name]: value
     }))
+
+    // Validate on change if field has been touched
+    if (touched[name]) {
+      const validation = validateField(name, value)
+      setErrors(prev => ({
+        ...prev,
+        [name]: validation.message
+      }))
+    }
+  }
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target
+    setTouched(prev => ({
+      ...prev,
+      [name]: true
+    }))
+
+    const validation = validateField(name, value)
+    setErrors(prev => ({
+      ...prev,
+      [name]: validation.message
+    }))
+  }
+
+  const validateForm = () => {
+    const newErrors = {}
+    let isValid = true
+
+    Object.keys(formData).forEach(name => {
+      const validation = validateField(name, formData[name])
+      if (!validation.isValid) {
+        newErrors[name] = validation.message
+        isValid = false
+      }
+    })
+
+    setErrors(newErrors)
+    return isValid
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setIsLoading(true)
+    
+    // Mark all fields as touched on submit
+    const allTouched = Object.keys(formData).reduce((acc, key) => ({
+      ...acc,
+      [key]: true
+    }), {})
+    setTouched(allTouched)
 
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match', {
+    if (!validateForm()) {
+      toast.error('Please fix the errors in the form', {
         position: "top-center",
         autoClose: 5000,
         hideProgressBar: false,
@@ -41,9 +160,10 @@ const SignUp = () => {
         progress: undefined,
         theme: "colored",
       })
-      setIsLoading(false)
       return
     }
+
+    setIsLoading(true)
 
     try {
       const response = await fetch(`${API_BASE_URL}/auth/register/`, {
@@ -67,7 +187,7 @@ const SignUp = () => {
       localStorage.setItem('accessToken', data.access);
       localStorage.setItem('refreshToken', data.refresh);
       localStorage.setItem('username', JSON.stringify(data.user.username));
-      navigate('/create');
+      // navigate('/create');
     } catch (error) {
       console.error('Sign up error:', error)
       toast.error('Failed to create account. Please try again.', {
@@ -83,6 +203,14 @@ const SignUp = () => {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const getInputClassName = (name) => {
+    const baseClasses = "appearance-none block w-full px-4 py-3 border rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+    if (touched[name] && errors[name]) {
+      return `${baseClasses} border-red-300 focus:ring-red-500`
+    }
+    return `${baseClasses} border-gray-300`
   }
 
   return (
@@ -119,7 +247,7 @@ const SignUp = () => {
           className="mt-8 sm:mx-auto sm:w-full sm:max-w-md"
         >
           <div className="bg-white py-8 px-4 shadow-xl sm:rounded-2xl sm:px-10 border border-gray-100">
-            <form className="space-y-6" onSubmit={handleSubmit}>
+            <form className="space-y-6" onSubmit={handleSubmit} noValidate>
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700">
                   Username
@@ -133,9 +261,19 @@ const SignUp = () => {
                     required
                     value={formData.name}
                     onChange={handleChange}
-                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                    onBlur={handleBlur}
+                    className={getInputClassName('name')}
                     placeholder="Choose a username"
                   />
+                  {touched.name && errors.name && (
+                    <motion.p 
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-1 text-sm text-red-600"
+                    >
+                      {errors.name}
+                    </motion.p>
+                  )}
                 </div>
               </div>
 
@@ -152,9 +290,19 @@ const SignUp = () => {
                     required
                     value={formData.email}
                     onChange={handleChange}
-                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                    onBlur={handleBlur}
+                    className={getInputClassName('email')}
                     placeholder="Enter your email"
                   />
+                  {touched.email && errors.email && (
+                    <motion.p 
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-1 text-sm text-red-600"
+                    >
+                      {errors.email}
+                    </motion.p>
+                  )}
                 </div>
               </div>
 
@@ -171,7 +319,8 @@ const SignUp = () => {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                    onBlur={handleBlur}
+                    className={getInputClassName('password')}
                     placeholder="Create a password"
                   />
                   <button
@@ -190,6 +339,15 @@ const SignUp = () => {
                       </svg>
                     )}
                   </button>
+                  {touched.password && errors.password && (
+                    <motion.p 
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-1 text-sm text-red-600"
+                    >
+                      {errors.password}
+                    </motion.p>
+                  )}
                 </div>
               </div>
 
@@ -206,7 +364,8 @@ const SignUp = () => {
                     required
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="appearance-none block w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                    onBlur={handleBlur}
+                    className={getInputClassName('confirmPassword')}
                     placeholder="Confirm your password"
                   />
                   <button
@@ -225,6 +384,15 @@ const SignUp = () => {
                       </svg>
                     )}
                   </button>
+                  {touched.confirmPassword && errors.confirmPassword && (
+                    <motion.p 
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-1 text-sm text-red-600"
+                    >
+                      {errors.confirmPassword}
+                    </motion.p>
+                  )}
                 </div>
               </div>
 
