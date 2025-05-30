@@ -3,10 +3,10 @@ import { useState, useEffect } from 'react'
 import apiFetch from '../../utils/api'
 import { toast, ToastContainer } from 'react-toastify'
 import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, reverseEasing } from 'framer-motion'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
-const RAZORPAY_KEY = import.meta.env.VITE_TEST_RAZORPAY_KEY_ID
+const RAZORPAY_KEY = import.meta.env.VITE_PROD_RAZORPAY_KEY_ID
 
 const PricingPage = () => {
   const navigate = useNavigate()
@@ -171,7 +171,8 @@ const PricingPage = () => {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to create order')
+        const errorMessage = (await response.json())['error']
+        throw new Error(`Failed to create order due to ${errorMessage}`)
       }
 
       const orderData = await response.json()
