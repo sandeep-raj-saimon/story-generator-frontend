@@ -11,7 +11,7 @@ const MediaGeneration = () => {
   const navigate = useNavigate()
   const [scenes, setScenes] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [errors, setErrors] = useState([])
   const [generatingAll, setGeneratingAll] = useState(false)
   const [selectedScenes, setSelectedScenes] = useState([])
   const [generatingSelected, setGeneratingSelected] = useState(false)
@@ -29,7 +29,7 @@ const MediaGeneration = () => {
   const [previewAudio, setPreviewAudio] = useState(null)
   const [isSelectedAll, setIsSelectedAll] = useState(false)
   const [userCredits, setUserCredits] = useState(null)
-  const MAX_SELECTED_SCENES = 3
+  const [MAX_SELECTED_SCENES] = useState(3)
 
   // Credit costs from backend
   const CREDIT_COSTS = {
@@ -87,9 +87,7 @@ const MediaGeneration = () => {
       }
       const data = await response.json()
       setScenes(data)
-      setError(null)
     } catch (err) {
-      setError('Failed to fetch scenes')
       console.error('Error fetching scenes:', err)
     } finally {
       setLoading(false)
@@ -105,6 +103,7 @@ const MediaGeneration = () => {
 
     try {
       setGeneratingAll(true)
+      setErrors([])
       const body = selectedMediaType === 'audio' 
         ? { voice_id: selectedVoice }
         : {}
@@ -182,18 +181,26 @@ const MediaGeneration = () => {
       setTimeout(() => {
         clearInterval(pollInterval)
         if (generatingAll) {
-          setError(`${selectedMediaType} generation timed out`)
+          setErrors([{
+            id: Date.now(),
+            message: `${selectedMediaType} generation timed out`,
+            sceneId: null
+          }])
           setGeneratingAll(false)
           setSelectedVoice(null) // Reset voice selection on timeout
         }
       }, 300000) // 5 minutes
       setIsSelectedAll(false)
     } catch (err) {
-      setError(err.message || `Failed to generate all ${selectedMediaType}`)
+      setErrors([{
+        id: Date.now(),
+        message: err.message || `Failed to generate all ${selectedMediaType}`,
+        sceneId: null
+      }])
       console.error(`Error generating all ${selectedMediaType}:`, err)
       setGeneratingAll(false)
       setIsSelectedAll(false)
-      setSelectedVoice(null) // Reset voice selection on error
+      setSelectedVoice(null)
     }
   }
 
@@ -205,6 +212,7 @@ const MediaGeneration = () => {
 
     try {
       setGeneratingSelected(true)
+      setErrors([])
       const sceneStatus = new Map(selectedScenes.map(scene => [scene.id, false]))
       const body = selectedMediaType === 'audio' 
         ? { voice_id: selectedVoice }
@@ -225,7 +233,18 @@ const MediaGeneration = () => {
       const responses = await Promise.all(promises)
       const errors = responses.filter(response => !response.ok)
       if (errors.length > 0) {
-        throw new Error(`Failed to generate ${selectedMediaType} for some scenes`)
+        const errorMessages = await Promise.all(errors.map(async (error, index) => {
+          const errorData = await error.json();
+          return {
+            id: Date.now() + index,
+            message: errorData.error || error.statusText,
+            sceneId: selectedScenes[index].id
+          };
+        }));
+        setErrors(errorMessages);
+        setGeneratingSelected(false);
+        setSelectedVoice(null);
+        return;
       }
 
       // Start polling for each scene
@@ -273,14 +292,22 @@ const MediaGeneration = () => {
       setTimeout(() => {
         clearInterval(pollInterval)
         if (generatingSelected) {
-          setError(`${selectedMediaType} generation timed out`)
+          setErrors([{
+            id: Date.now(),
+            message: `${selectedMediaType} generation timed out`,
+            sceneId: null
+          }])
           setGeneratingSelected(false)
           setSelectedVoice(null) // Reset voice selection on timeout
         }
       }, 300000) // 5 minutes
       
     } catch (err) {
-      setError(`Failed to generate selected ${selectedMediaType}`)
+      setErrors([{
+        id: Date.now(),
+        message: err.message,
+        sceneId: null
+      }])
       console.error(`Error generating selected ${selectedMediaType}:`, err)
       setGeneratingSelected(false)
       setSelectedVoice(null) // Reset voice selection on error
@@ -292,7 +319,11 @@ const MediaGeneration = () => {
       if (prev.some(s => s.id === scene.id)) {
         return prev.filter(s => s.id !== scene.id)
       } else if (prev.length >= MAX_SELECTED_SCENES) {
-        setError(`You can only select up to ${MAX_SELECTED_SCENES} scenes at a time`)
+        setErrors([{
+          id: Date.now(),
+          message: `You can only select up to ${MAX_SELECTED_SCENES} scenes at a time`,
+          sceneId: null
+        }])
         return prev
       } else {
         return [...prev, scene]
@@ -346,7 +377,11 @@ const MediaGeneration = () => {
         clearInterval(interval)
         setPollingInterval(null)
         if (isGeneratingPreview) {
-          setError('Preview generation timed out')
+          setErrors([{
+            id: Date.now(),
+            message: 'Preview generation timed out',
+            sceneId: null
+          }])
           setIsGeneratingPreview(false)
         }
       }
@@ -356,7 +391,7 @@ const MediaGeneration = () => {
   const handlePreview = async (format, subFormat = null) => {
     try {
       setIsGeneratingPreview(true)
-      setError(null)
+      setErrors([])
       setPreviewType(format)
 
       const endpoint = subFormat 
@@ -377,7 +412,11 @@ const MediaGeneration = () => {
 
       startPolling(format)
     } catch (err) {
-      setError(err.message)
+      setErrors([{
+        id: Date.now(),
+        message: err.message,
+        sceneId: null
+      }])
       console.error(`Error generating preview for ${format}:`, err)
       setIsGeneratingPreview(false)
     }
@@ -479,24 +518,28 @@ const MediaGeneration = () => {
           </div>
 
           <AnimatePresence>
-            {error && (
+            {errors.map((error) => (
               <motion.div
+                key={error.id}
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-6 flex justify-between items-center"
+                className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-4 flex justify-between items-center"
               >
-                <span>{error}</span>
+                <div className="flex-1">
+                  <span className="font-medium">Scene {scenes.findIndex(s => s.id === error.sceneId) + 1}: </span>
+                  <span>{error.message}</span>
+                </div>
                 <button 
-                  onClick={() => setError(null)}
-                  className="text-red-700 hover:text-red-900 transition-colors"
+                  onClick={() => setErrors(errors.filter(e => e.id !== error.id))}
+                  className="ml-4 text-red-700 hover:text-red-900 transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </motion.div>
-            )}
+            ))}
           </AnimatePresence>
 
           <div className="space-y-8">

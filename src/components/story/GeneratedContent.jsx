@@ -207,7 +207,6 @@ const GeneratedContent = () => {
                         {file.type.toUpperCase()}
                       </span>
                     </div>
-                    <span className="text-sm text-purple-500 font-medium">Revision Number: {index+1}</span>
                     <div className="space-y-2 text-sm text-gray-600 mb-4">
                       <p className="flex items-center">
                         <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -293,6 +292,7 @@ const GeneratedContent = () => {
 
         {/* Preview Modal */}
         <AnimatePresence>
+          {console.log(selectedFile)}
           {selectedFile && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -328,7 +328,7 @@ const GeneratedContent = () => {
                       className="w-full h-[70vh] border-0"
                       title="PDF Preview"
                     />
-                  ) : selectedFile.type === 'mp4' ? (
+                  ) : selectedFile.type === 'audio' ? (
                     <video
                       src={selectedFile.url}
                       controls
