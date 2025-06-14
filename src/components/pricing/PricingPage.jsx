@@ -161,10 +161,11 @@ const PricingPage = () => {
   const handlePlanSelect = async (plan) => {
     try {
       setSelectedPlan(plan)
-      const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'com'
+      // const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'com'
+      const country = await getUserCountry()
       console.log('discountApplied', discountApplied)
       // Create order with referral code if applied
-      const response = await fetch(`${API_BASE_URL}/payment/create-order/?plan_id=${plan.id}&domain=${domain}`, {
+      const response = await fetch(`${API_BASE_URL}/payment/create-order/?plan_id=${plan.id}&domain=${country === 'IN' ? 'in' : 'com'}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
