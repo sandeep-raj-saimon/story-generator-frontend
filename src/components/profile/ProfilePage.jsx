@@ -94,6 +94,9 @@ const ProfilePage = () => {
                                                     <p className="text-lg font-mono font-semibold text-indigo-600">
                                                         {user.referral_code || 'Not generated yet'}
                                                     </p>
+                                                    <p className="text-sm text-gray-600 mt-1">
+                                                        Language: {user.language === 'en-US' ? 'English-US' : 'Hindi' }
+                                                    </p>
                                                 </div>
                                                 {user.referral_code && (
                                                     <button

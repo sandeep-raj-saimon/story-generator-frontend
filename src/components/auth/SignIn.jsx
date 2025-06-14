@@ -46,6 +46,7 @@ const SignIn = () => {
       localStorage.setItem('accessToken', data.access)
       localStorage.setItem('refreshToken', data.refresh)
       localStorage.setItem('username', JSON.stringify(data.user.username))
+      localStorage.setItem('language', JSON.stringify(data.user.language))
       navigate('/create')
     } catch (err) {
       console.error('Sign in error:', err)

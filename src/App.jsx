@@ -9,6 +9,8 @@ import ForgotPassword from './components/auth/ForgotPassword'
 import ResetPassword from './components/auth/ResetPassword'
 import StoryDetail from './components/story/StoryDetail'
 import MyStories from './components/story/MyStories'
+import ExploreStories from './components/story/ExploreStories'
+import StoryView from './components/story/StoryView'
 import MediaGeneration from './components/story/MediaGeneration'
 import GeneratedContent from './components/story/GeneratedContent'
 import PricingPage from './components/pricing/PricingPage'
@@ -42,10 +44,12 @@ const AppContent = () => {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/stories/:id" element={<StoryDetail />} />
+            <Route path="/story/:id" element={<StoryView />} />
             <Route path="/my-stories" element={<MyStories />} />
+            <Route path="/explore" element={<ExploreStories />} />
             <Route path="/stories/:storyId/media" element={<MediaGeneration />} />
-            <Route path="/generated-content" element={<GeneratedContent />} />
             <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/profile/content" element={<GeneratedContent />} />
             <Route path="/terms" element={<TermsAndConditions />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/refund" element={<RefundPolicy />} />

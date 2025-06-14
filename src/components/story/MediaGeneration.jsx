@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import VoiceSelectionModal from './VoiceSelectionModal'
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -16,63 +16,50 @@ const MediaGeneration = () => {
   const [selectedScenes, setSelectedScenes] = useState([])
   const [generatingSelected, setGeneratingSelected] = useState(false)
   const [selectedImage, setSelectedImage] = useState(null)
-  const [isExportOpen, setIsExportOpen] = useState(false)
-  const [isMp4SubmenuOpen, setIsMp4SubmenuOpen] = useState(false)
   const [previewUrl, setPreviewUrl] = useState(null)
   const [previewType, setPreviewType] = useState('pdf')
   const [isPreviewOpen, setIsPreviewOpen] = useState(false)
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false)
   const [pollingInterval, setPollingInterval] = useState(null)
-  const [selectedMediaType, setSelectedMediaType] = useState('image')
+  const [selectedMediaType, setSelectedMediaType] = useState('generate')
   const [showVoiceModal, setShowVoiceModal] = useState(false)
   const [selectedVoice, setSelectedVoice] = useState(null)
   const [previewAudio, setPreviewAudio] = useState(null)
   const [isSelectedAll, setIsSelectedAll] = useState(false)
-  const [userCredits, setUserCredits] = useState(null)
   const [MAX_SELECTED_SCENES] = useState(3)
-
-  // Credit costs from backend
-  const CREDIT_COSTS = {
-    image: 100,  // 1 credit per image
-    audio: 0.3 // 0.3 credits per character
-  }
+  const [isExportOpen, setIsExportOpen] = useState(false)
+  const [userLanguage, setUserLanguage] = useState(null)
 
   useEffect(() => {
-    fetchScenes()
-    fetchUserCredits()
-    return () => {
-      if (pollingInterval) {
-        clearInterval(pollingInterval)
-      }
-    }
-  }, [storyId])
+    fetchUserLanguage()
+  }, [])
 
-  const fetchUserCredits = async () => {
+  const fetchUserLanguage = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/profile/`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
       })
-      if (!response.ok) throw new Error('Failed to fetch user credits')
-      const data = await response.json()
-      setUserCredits(data.credits?.credits_remaining || 0)
-    } catch (err) {
-      console.error('Error fetching user credits:', err)
+      
+      if (response.ok) {
+        const userData = await response.json()
+        setUserLanguage(userData.language || 'en-US')
+      }
+    } catch (error) {
+      console.error('Error fetching user language:', error)
+      setUserLanguage('en-US') // Default to English
     }
   }
 
-  const calculateCreditsNeeded = (scenes) => {
-    if (selectedMediaType === 'image') {
-      return Math.ceil(scenes.length * CREDIT_COSTS.image)
-    } else {
-      // For audio, calculate based on character count in scene content
-      return Math.ceil(scenes.reduce((total, scene) => {
-        const charCount = scene.content.length
-        return total + (charCount * CREDIT_COSTS.audio)
-      }, 0))
+  useEffect(() => {
+    fetchScenes()
+    return () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval)
+      }
     }
-  }
+  }, [storyId])
 
   const fetchScenes = async () => {
     try {
@@ -86,6 +73,7 @@ const MediaGeneration = () => {
         throw new Error('Failed to fetch scenes')
       }
       const data = await response.json()
+      console.log('Fetched scenes data:', data)
       setScenes(data)
     } catch (err) {
       console.error('Error fetching scenes:', err)
@@ -95,222 +83,517 @@ const MediaGeneration = () => {
   }
 
   const handleGenerateAll = async () => {
-    if (selectedMediaType === 'audio' && !selectedVoice) {
-      setIsSelectedAll(true)
-      setShowVoiceModal(true)
-      return
-    }
-
-    try {
-      setGeneratingAll(true)
-      setErrors([])
-      const body = selectedMediaType === 'audio' 
-        ? { voice_id: selectedVoice }
-        : {}
-
-      const response = await fetch(`${API_BASE_URL}/stories/${storyId}/generate-bulk-${selectedMediaType}/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || `Failed to generate all ${selectedMediaType}`)
-      }
-
-      // Get all scene IDs
-      const scenesResponse = await fetch(`${API_BASE_URL}/stories/${storyId}/scenes/`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-        }
-      })
-      if (!scenesResponse.ok) {
-        throw new Error('Failed to fetch scenes')
-      }
-      const scenes = await scenesResponse.json()
-      let sceneIds = scenes.map(scene => scene.id)
-      const sceneStatus = new Map(sceneIds.map(id => [id, false]))
-
-      // Start polling for each scene
-      const pollInterval = setInterval(async () => {
-        try {
-          const scenePromises = sceneIds.map(sceneId =>
-            fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${sceneId}/`, {
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-              }
-            })
-          )
-          
-          const sceneResponses = await Promise.all(scenePromises)
-          const sceneData = await Promise.all(sceneResponses.map(r => r.json()))
-          
-          // Update status for each scene
-          sceneData.forEach((scene, index) => {
-            const sceneId = sceneIds[index]
-            if (scene?.media?.some(m => m.media_type === selectedMediaType)) {
-              sceneStatus.set(sceneId, true)
-              // remove the sceneId from the sceneIds array when the media is generated
-              sceneIds = sceneIds.filter(id => id !== sceneId)
-            }
-          })
-          
-          // Check if all scenes are done
-          const allDone = Array.from(sceneStatus.values()).every(status => status)
-          if (allDone) {
-            clearInterval(pollInterval)
-            setGeneratingAll(false)
-            setSelectedVoice(null) // Reset voice selection after generation
-            await fetchScenes()
-            await fetchUserCredits()
-            toast.success(`All ${selectedMediaType}s generated successfully!`)
+    if (selectedMediaType === 'generate') {
+      try {
+        setGeneratingAll(true)
+        setErrors([])
+        
+        // Get all scenes
+        const scenesResponse = await fetch(`${API_BASE_URL}/stories/${storyId}/scenes/`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
           }
-        } catch (err) {
-          console.error('Error polling media status:', err)
-          clearInterval(pollInterval)
-          setGeneratingAll(false)
-          setSelectedVoice(null) // Reset voice selection on error
+        })
+        if (!scenesResponse.ok) {
+          throw new Error('Failed to fetch scenes')
         }
-      }, 5000) // Poll every 5 seconds
+        const scenes = await scenesResponse.json()
+        const sceneStatus = new Map(scenes.map(scene => [scene.id, { image: false, audio: false }]))
 
-      // Cleanup polling after 5 minutes
-      setTimeout(() => {
-        clearInterval(pollInterval)
-        if (generatingAll) {
+        // Check for voice selection before proceeding
+        if (!selectedVoice) {
+          setIsSelectedAll(true)
+          setShowVoiceModal(true)
+          return
+        }
+
+        // Generate media for each scene
+        const generationPromises = scenes.flatMap(scene => [
+          // Image generation for this scene
+          fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${scene.id}/generate-image/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+              'Content-Type': 'application/json'
+            }
+          }).then(async response => {
+            if (!response.ok) {
+              const errorData = await response.json()
+              throw new Error(`Failed to generate image for scene ${scene.id}: ${errorData.error || 'Unknown error'}`)
+            }
+            return { sceneId: scene.id, type: 'image' }
+          }),
+          
+          // Audio generation for this scene
+          fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${scene.id}/generate-audio/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ voice_id: selectedVoice })
+          }).then(async response => {
+            if (!response.ok) {
+              const errorData = await response.json()
+              throw new Error(`Failed to generate audio for scene ${scene.id}: ${errorData.error || 'Unknown error'}`)
+            }
+            return { sceneId: scene.id, type: 'audio' }
+          })
+        ])
+
+        try {
+          // Wait for all generation requests to be initiated
+          await Promise.all(generationPromises)
+          
+          // Start polling for each scene's media status
+          let pollInterval = setInterval(async () => {
+            try {
+              const scenePromises = scenes.map(scene =>
+                fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${scene.id}/`, {
+                  headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                  }
+                })
+              )
+              
+              const sceneResponses = await Promise.all(scenePromises)
+              const sceneData = await Promise.all(sceneResponses.map(r => r.json()))
+              
+              // Update status for each scene
+              sceneData.forEach((scene, index) => {
+                const sceneId = scenes[index].id
+                const hasImage = scene?.media?.some(m => m.media_type === 'image')
+                const hasAudio = scene?.media?.some(m => m.media_type === 'audio')
+                
+                console.log(`Scene ${sceneId}: hasImage=${hasImage}, hasAudio=${hasAudio}, media count=${scene?.media?.length || 0}`)
+                
+                if (hasImage) sceneStatus.get(sceneId).image = true
+                if (hasAudio) sceneStatus.get(sceneId).audio = true
+              })
+              
+              // Check if all scenes are done
+              const allDone = Array.from(sceneStatus.values()).every(status => status.image && status.audio)
+              console.log('All scenes done:', allDone)
+              if (allDone) {
+                console.log('Media generation completed, refreshing scenes...')
+                clearInterval(pollInterval)
+                setGeneratingAll(false)
+                setSelectedVoice(null)
+                // Add a small delay to ensure backend has processed all media
+                setTimeout(async () => {
+                  await fetchScenes()
+                  toast.success('All media generated successfully!')
+                }, 2000)
+              }
+            } catch (err) {
+              console.error('Error polling media status:', err)
+              clearInterval(pollInterval)
+              setGeneratingAll(false)
+              setSelectedVoice(null)
+            }
+          }, 5000)
+
+          // Cleanup polling after 5 minutes
+          setTimeout(() => {
+            if (pollInterval) {
+              clearInterval(pollInterval)
+            }
+            if (generatingAll) {
+              setErrors([{
+                id: Date.now(),
+                message: 'Media generation timed out',
+                sceneId: null
+              }])
+              setGeneratingAll(false)
+              setSelectedVoice(null)
+            }
+          }, 300000)
+
+        } catch (err) {
+          // Handle any errors during the initial generation requests
           setErrors([{
             id: Date.now(),
-            message: `${selectedMediaType} generation timed out`,
+            message: err.message || 'Failed to initiate media generation',
             sceneId: null
           }])
+          console.error('Error initiating media generation:', err)
           setGeneratingAll(false)
-          setSelectedVoice(null) // Reset voice selection on timeout
+          setSelectedVoice(null)
         }
-      }, 300000) // 5 minutes
-      setIsSelectedAll(false)
-    } catch (err) {
-      setErrors([{
-        id: Date.now(),
-        message: err.message || `Failed to generate all ${selectedMediaType}`,
-        sceneId: null
-      }])
-      console.error(`Error generating all ${selectedMediaType}:`, err)
-      setGeneratingAll(false)
-      setIsSelectedAll(false)
-      setSelectedVoice(null)
+
+        setIsSelectedAll(false)
+      } catch (err) {
+        setErrors([{
+          id: Date.now(),
+          message: err.message || 'Failed to generate media',
+          sceneId: null
+        }])
+        console.error('Error generating media:', err)
+        setGeneratingAll(false)
+        setIsSelectedAll(false)
+        setSelectedVoice(null)
+      }
+    } else {
+      // Handle single media type generation (existing code)
+      if (selectedMediaType === 'audio' && !selectedVoice) {
+        setIsSelectedAll(true)
+        setShowVoiceModal(true)
+        return
+      }
+
+      try {
+        setGeneratingAll(true)
+        setErrors([])
+        const sceneStatus = new Map(selectedScenes.map(scene => [scene.id, false]))
+        const body = selectedMediaType === 'audio' 
+          ? { voice_id: selectedVoice }
+          : {}
+        
+        // Start generation for each scene
+        const promises = selectedScenes.map(scene =>
+          fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${scene.id}/generate-${selectedMediaType}/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+          })
+        )
+
+        const responses = await Promise.all(promises)
+        const errors = responses.filter(response => !response.ok)
+        if (errors.length > 0) {
+          const errorMessages = await Promise.all(errors.map(async (error, index) => {
+            const errorData = await error.json();
+            return {
+              id: Date.now() + index,
+              message: errorData.error || error.statusText,
+              sceneId: selectedScenes[index].id
+            };
+          }));
+          setErrors(errorMessages);
+          setGeneratingAll(false);
+          setSelectedVoice(null);
+          return;
+        }
+
+        // Start polling for each scene
+        let pollInterval = setInterval(async () => {
+          try {
+            const scenePromises = selectedScenes.map(scene =>
+              fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${scene.id}/`, {
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                }
+              })
+            )
+            
+            const sceneResponses = await Promise.all(scenePromises)
+            const sceneData = await Promise.all(sceneResponses.map(r => r.json()))
+            
+            // Update status for each scene
+            sceneData.forEach((scene, index) => {
+              const sceneId = selectedScenes[index].id
+              if (scene?.media?.some(m => m.media_type === selectedMediaType)) {
+                sceneStatus.set(sceneId, true)
+              }
+            })
+            
+            // Check if all scenes are done
+            const allDone = Array.from(sceneStatus.values()).every(status => status)
+            if (allDone) {
+              clearInterval(pollInterval)
+              setGeneratingAll(false)
+              setSelectedScenes([])
+              setSelectedVoice(null) // Reset voice selection after generation
+              // Add a small delay to ensure backend has processed all media
+              setTimeout(async () => {
+                await fetchScenes()
+                toast.success(`${selectedMediaType.charAt(0).toUpperCase() + selectedMediaType.slice(1)} generation completed!`)
+              }, 2000)
+            }
+          } catch (err) {
+            console.error('Error polling media status:', err)
+            clearInterval(pollInterval)
+            setGeneratingAll(false)
+            setSelectedVoice(null) // Reset voice selection on error
+          }
+        }, 5000) // Poll every 5 seconds
+
+        // Cleanup polling after 5 minutes
+        setTimeout(() => {
+          clearInterval(pollInterval)
+          if (generatingAll) {
+            setErrors([{
+              id: Date.now(),
+              message: `${selectedMediaType} generation timed out`,
+              sceneId: null
+            }])
+            setGeneratingAll(false)
+            setSelectedVoice(null) // Reset voice selection on timeout
+          }
+        }, 300000) // 5 minutes
+        
+      } catch (err) {
+        setErrors([{
+          id: Date.now(),
+          message: err.message,
+          sceneId: null
+        }])
+        console.error(`Error generating selected ${selectedMediaType}:`, err)
+        setGeneratingAll(false)
+        setSelectedVoice(null) // Reset voice selection on error
+      }
     }
   }
 
   const handleGenerateSelected = async () => {
-    if (selectedMediaType === 'audio' && !selectedVoice) {
-      setShowVoiceModal(true)
-      return
-    }
+    if (selectedMediaType === 'generate') {
+      try {
+        setGeneratingSelected(true)
+        setErrors([])
 
-    try {
-      setGeneratingSelected(true)
-      setErrors([])
-      const sceneStatus = new Map(selectedScenes.map(scene => [scene.id, false]))
-      const body = selectedMediaType === 'audio' 
-        ? { voice_id: selectedVoice }
-        : {}
-      
-      // Start generation for each scene
-      const promises = selectedScenes.map(scene =>
-        fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${scene.id}/generate-${selectedMediaType}/`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(body)
-        })
-      )
-
-      const responses = await Promise.all(promises)
-      const errors = responses.filter(response => !response.ok)
-      if (errors.length > 0) {
-        const errorMessages = await Promise.all(errors.map(async (error, index) => {
-          const errorData = await error.json();
-          return {
-            id: Date.now() + index,
-            message: errorData.error || error.statusText,
-            sceneId: selectedScenes[index].id
-          };
-        }));
-        setErrors(errorMessages);
-        setGeneratingSelected(false);
-        setSelectedVoice(null);
-        return;
-      }
-
-      // Start polling for each scene
-      const pollInterval = setInterval(async () => {
-        try {
-          const scenePromises = selectedScenes.map(scene =>
-            fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${scene.id}/`, {
-              headers: {
-                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-              }
-            })
-          )
-          
-          const sceneResponses = await Promise.all(scenePromises)
-          const sceneData = await Promise.all(sceneResponses.map(r => r.json()))
-          
-          // Update status for each scene
-          sceneData.forEach((scene, index) => {
-            const sceneId = selectedScenes[index].id
-            if (scene?.media?.some(m => m.media_type === selectedMediaType)) {
-              sceneStatus.set(sceneId, true)
-            }
-          })
-          
-          // Check if all scenes are done
-          const allDone = Array.from(sceneStatus.values()).every(status => status)
-          if (allDone) {
-            clearInterval(pollInterval)
-            setGeneratingSelected(false)
-            setSelectedScenes([])
-            setSelectedVoice(null) // Reset voice selection after generation
-            await fetchScenes()
-            await fetchUserCredits()
-            toast.success(`${selectedMediaType.charAt(0).toUpperCase() + selectedMediaType.slice(1)} generation completed!`)
-          }
-        } catch (err) {
-          console.error('Error polling media status:', err)
-          clearInterval(pollInterval)
-          setGeneratingSelected(false)
-          setSelectedVoice(null) // Reset voice selection on error
+        // Check for voice selection before proceeding
+        if (!selectedVoice) {
+          setShowVoiceModal(true)
+          return
         }
-      }, 5000) // Poll every 5 seconds
 
-      // Cleanup polling after 5 minutes
-      setTimeout(() => {
-        clearInterval(pollInterval)
-        if (generatingSelected) {
+        // Generate media for each selected scene
+        const generationPromises = selectedScenes.flatMap(scene => [
+          // Image generation for this scene
+          fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${scene.id}/generate-image/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+              'Content-Type': 'application/json'
+            }
+          }).then(async response => {
+            if (!response.ok) {
+              const errorData = await response.json()
+              throw new Error(`Failed to generate image for scene ${scene.id}: ${errorData.error || 'Unknown error'}`)
+            }
+            return { sceneId: scene.id, type: 'image' }
+          }),
+          
+          // Audio generation for this scene
+          fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${scene.id}/generate-audio/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ voice_id: selectedVoice })
+          }).then(async response => {
+            if (!response.ok) {
+              const errorData = await response.json()
+              throw new Error(`Failed to generate audio for scene ${scene.id}: ${errorData.error || 'Unknown error'}`)
+            }
+            return { sceneId: scene.id, type: 'audio' }
+          })
+        ])
+
+        try {
+          // Wait for all generation requests to be initiated
+          await Promise.all(generationPromises)
+          
+          // Start polling for each scene's media status
+          const sceneStatus = new Map(selectedScenes.map(scene => [scene.id, { image: false, audio: false }]))
+          let pollInterval
+
+          pollInterval = setInterval(async () => {
+            try {
+              const scenePromises = selectedScenes.map(scene =>
+                fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${scene.id}/`, {
+                  headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                  }
+                })
+              )
+              
+              const sceneResponses = await Promise.all(scenePromises)
+              const sceneData = await Promise.all(sceneResponses.map(r => r.json()))
+              
+              // Update status for each scene
+              sceneData.forEach((scene, index) => {
+                const sceneId = selectedScenes[index].id
+                const hasImage = scene?.media?.some(m => m.media_type === 'image')
+                const hasAudio = scene?.media?.some(m => m.media_type === 'audio')
+                
+                if (hasImage) sceneStatus.get(sceneId).image = true
+                if (hasAudio) sceneStatus.get(sceneId).audio = true
+              })
+              
+              // Check if all scenes are done
+              const allDone = Array.from(sceneStatus.values()).every(status => status.image && status.audio)
+              if (allDone) {
+                clearInterval(pollInterval)
+                setGeneratingSelected(false)
+                setSelectedScenes([])
+                setSelectedVoice(null)
+                // Add a small delay to ensure backend has processed all media
+                setTimeout(async () => {
+                  await fetchScenes()
+                  toast.success('All media generated successfully!')
+                }, 2000)
+              }
+            } catch (err) {
+              console.error('Error polling media status:', err)
+              clearInterval(pollInterval)
+              setGeneratingSelected(false)
+              setSelectedVoice(null)
+            }
+          }, 5000)
+
+          // Cleanup polling after 5 minutes
+          setTimeout(() => {
+            if (pollInterval) {
+              clearInterval(pollInterval)
+            }
+            if (generatingSelected) {
+              setErrors([{
+                id: Date.now(),
+                message: 'Media generation timed out',
+                sceneId: null
+              }])
+              setGeneratingSelected(false)
+              setSelectedVoice(null)
+            }
+          }, 300000)
+
+        } catch (err) {
+          // Handle any errors during the initial generation requests
           setErrors([{
             id: Date.now(),
-            message: `${selectedMediaType} generation timed out`,
+            message: err.message || 'Failed to initiate media generation',
             sceneId: null
           }])
+          console.error('Error initiating media generation:', err)
           setGeneratingSelected(false)
-          setSelectedVoice(null) // Reset voice selection on timeout
+          setSelectedVoice(null)
         }
-      }, 300000) // 5 minutes
-      
-    } catch (err) {
-      setErrors([{
-        id: Date.now(),
-        message: err.message,
-        sceneId: null
-      }])
-      console.error(`Error generating selected ${selectedMediaType}:`, err)
-      setGeneratingSelected(false)
-      setSelectedVoice(null) // Reset voice selection on error
+      } catch (err) {
+        setErrors([{
+          id: Date.now(),
+          message: err.message || 'Failed to generate media',
+          sceneId: null
+        }])
+        console.error('Error generating media:', err)
+        setGeneratingSelected(false)
+        setSelectedVoice(null)
+      }
+    } else {
+      // Handle single media type generation (existing code)
+      if (selectedMediaType === 'audio' && !selectedVoice) {
+        setShowVoiceModal(true)
+        return
+      }
+
+      try {
+        setGeneratingSelected(true)
+        setErrors([])
+        const sceneStatus = new Map(selectedScenes.map(scene => [scene.id, false]))
+        const body = selectedMediaType === 'audio' 
+          ? { voice_id: selectedVoice }
+          : {}
+        
+        // Start generation for each scene
+        const promises = selectedScenes.map(scene =>
+          fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${scene.id}/generate-${selectedMediaType}/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+          })
+        )
+
+        const responses = await Promise.all(promises)
+        const errors = responses.filter(response => !response.ok)
+        if (errors.length > 0) {
+          const errorMessages = await Promise.all(errors.map(async (error, index) => {
+            const errorData = await error.json();
+            return {
+              id: Date.now() + index,
+              message: errorData.error || error.statusText,
+              sceneId: selectedScenes[index].id
+            };
+          }));
+          setErrors(errorMessages);
+          setGeneratingSelected(false);
+          setSelectedVoice(null);
+          return;
+        }
+
+        // Start polling for each scene
+        let pollInterval = setInterval(async () => {
+          try {
+            const scenePromises = selectedScenes.map(scene =>
+              fetch(`${API_BASE_URL}/stories/${storyId}/scenes/${scene.id}/`, {
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                }
+              })
+            )
+            
+            const sceneResponses = await Promise.all(scenePromises)
+            const sceneData = await Promise.all(sceneResponses.map(r => r.json()))
+            
+            // Update status for each scene
+            sceneData.forEach((scene, index) => {
+              const sceneId = selectedScenes[index].id
+              if (scene?.media?.some(m => m.media_type === selectedMediaType)) {
+                sceneStatus.set(sceneId, true)
+              }
+            })
+            
+            // Check if all scenes are done
+            const allDone = Array.from(sceneStatus.values()).every(status => status)
+            if (allDone) {
+              clearInterval(pollInterval)
+              setGeneratingSelected(false)
+              setSelectedScenes([])
+              setSelectedVoice(null) // Reset voice selection after generation
+              // Add a small delay to ensure backend has processed all media
+              setTimeout(async () => {
+                await fetchScenes()
+                toast.success(`${selectedMediaType.charAt(0).toUpperCase() + selectedMediaType.slice(1)} generation completed!`)
+              }, 2000)
+            }
+          } catch (err) {
+            console.error('Error polling media status:', err)
+            clearInterval(pollInterval)
+            setGeneratingSelected(false)
+            setSelectedVoice(null) // Reset voice selection on error
+          }
+        }, 5000) // Poll every 5 seconds
+
+        // Cleanup polling after 5 minutes
+        setTimeout(() => {
+          clearInterval(pollInterval)
+          if (generatingSelected) {
+            setErrors([{
+              id: Date.now(),
+              message: `${selectedMediaType} generation timed out`,
+              sceneId: null
+            }])
+            setGeneratingSelected(false)
+            setSelectedVoice(null) // Reset voice selection on timeout
+          }
+        }, 300000) // 5 minutes
+        
+      } catch (err) {
+        setErrors([{
+          id: Date.now(),
+          message: err.message,
+          sceneId: null
+        }])
+        console.error(`Error generating selected ${selectedMediaType}:`, err)
+        setGeneratingSelected(false)
+        setSelectedVoice(null) // Reset voice selection on error
+      }
     }
   }
 
@@ -441,59 +724,38 @@ const MediaGeneration = () => {
       </div>
 
       <div className="relative p-6 max-w-7xl mx-auto">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="bg-white rounded-2xl shadow-xl p-8 mb-6 border border-gray-100"
-        >
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6 border border-gray-100">
           <div className="flex justify-between items-center mb-8">
             <div>
               <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
                 Media Generation
               </h2>
               <div className="mt-4 flex items-center gap-4">
-                <motion.div 
-                  whileHover={{ scale: 1.02 }}
-                  className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3"
-                >
+                <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
                   <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <p className="text-sm font-medium text-blue-700">
                     You can select up to <span className="font-bold">{MAX_SELECTED_SCENES}</span> scenes at a time
                   </p>
-                </motion.div>
-                <motion.div 
-                  whileHover={{ scale: 1.02 }}
-                  className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3"
-                >
-                  <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-sm font-medium text-gray-700">
-                    Available Credits: <span className="font-bold">{userCredits}</span>
-                  </p>
-                </motion.div>
+                </div>
               </div>
             </div>
             <div className="flex gap-4">
-              <motion.select
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+              <select
                 value={selectedMediaType}
                 onChange={(e) => setSelectedMediaType(e.target.value)}
                 className="border border-gray-300 rounded-xl px-4 py-2 bg-white shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
               >
+                <option value="generate">Generate</option>
                 <option value="image">Image</option>
                 <option value="audio">Audio</option>
-              </motion.select>
+              </select>
+              
               {selectedScenes.length > 0 && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                <button
                   onClick={handleGenerateSelected}
-                  disabled={generatingSelected || calculateCreditsNeeded(selectedScenes) > userCredits}
+                  disabled={generatingSelected}
                   className="bg-gradient-to-r from-green-500 to-green-600 text-white py-2 px-6 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center shadow-sm"
                 >
                   {generatingSelected ? (
@@ -506,24 +768,18 @@ const MediaGeneration = () => {
                     </>
                   ) : (
                     <>
-                      Generate {selectedMediaType.charAt(0).toUpperCase() + selectedMediaType.slice(1)} ({selectedScenes.length}/{MAX_SELECTED_SCENES})
-                      <span className="ml-2 text-sm bg-white bg-opacity-20 px-2 py-0.5 rounded-full text-blue-500">
-                        {Math.ceil(calculateCreditsNeeded(selectedScenes))} credits
-                      </span>
+                      Generate ({selectedScenes.length}/{MAX_SELECTED_SCENES})
                     </>
                   )}
-                </motion.button>
+                </button>
               )}
             </div>
           </div>
 
           <AnimatePresence>
             {errors.map((error) => (
-              <motion.div
+              <div
                 key={error.id}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
                 className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-xl mb-4 flex justify-between items-center"
               >
                 <div className="flex-1">
@@ -538,7 +794,7 @@ const MediaGeneration = () => {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-              </motion.div>
+              </div>
             ))}
           </AnimatePresence>
 
@@ -547,16 +803,10 @@ const MediaGeneration = () => {
               const { hasImage, hasAudio } = getMediaStatus(scene)
               const isSelected = selectedScenes.some(s => s.id === scene.id)
               const canSelect = !isSelected && selectedScenes.length < MAX_SELECTED_SCENES
-              const sceneCredits = selectedMediaType === 'image' 
-                ? Math.ceil(CREDIT_COSTS.image)
-                : Math.ceil(scene.content.length * CREDIT_COSTS.audio)
               
               return (
-                <motion.div
+                <div
                   key={scene.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: index * 0.1 }}
                   className={`border rounded-2xl overflow-hidden transition-all duration-200 ${
                     isSelected ? 'ring-2 ring-green-500 shadow-lg' : 'hover:shadow-md'
                   }`}
@@ -566,9 +816,7 @@ const MediaGeneration = () => {
                     <div className="w-1/2 p-6 border-r">
                       <div className="flex items-start gap-4">
                         <div className="flex-shrink-0">
-                          <motion.input
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
+                          <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => handleSceneSelection(scene)}
@@ -581,29 +829,31 @@ const MediaGeneration = () => {
                         <div className="flex-grow">
                           <div className="flex justify-between items-start">
                             <h3 className="text-lg font-semibold text-gray-900">Scene {index + 1}: {scene.title}</h3>
-                            <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                              {Math.ceil(sceneCredits)} credits
-                            </span>
+                            <div className="flex flex-col items-end">
+                              {selectedMediaType === 'generate' && (
+                                <span className="text-xs text-gray-400 mt-1">
+                                  (Image + Audio)
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <p className="text-gray-600 mt-2">{scene.content}</p>
                           <p className="text-gray-500 italic mt-2">{scene.scene_description}</p>
                           <div className="flex items-center gap-3 mt-3">
-                            <motion.div
-                              whileHover={{ scale: 1.1 }}
+                            <div
                               className={`p-2 rounded-full ${hasImage ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}
                             >
                               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
                               </svg>
-                            </motion.div>
-                            <motion.div
-                              whileHover={{ scale: 1.1 }}
+                            </div>
+                            <div
                               className={`p-2 rounded-full ${hasAudio ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}
                             >
                               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M10 3v4a3 3 0 01-3 3H4V3h6zm0 10v4H4v-4h3a3 3 0 003-3z" clipRule="evenodd" />
                               </svg>
-                            </motion.div>
+                            </div>
                             <span className="text-sm text-blue-500 bg-gray-100 px-3 py-1 rounded-full">
                               {Math.ceil(scene.content.length)} characters
                             </span>
@@ -616,9 +866,8 @@ const MediaGeneration = () => {
                     <div className="w-1/2 p-6 bg-gray-50">
                       <div className="grid grid-cols-2 gap-4">
                         {scene.media?.map((media) => (
-                          <motion.div
+                          <div
                             key={media.id}
-                            whileHover={{ scale: 1.02 }}
                             className="border rounded-xl overflow-hidden bg-white shadow-sm"
                           >
                             {media.media_type === 'image' ? (
@@ -650,31 +899,25 @@ const MediaGeneration = () => {
                                 </div>
                               </div>
                             )}
-                          </motion.div>
+                          </div>
                         ))}
                       </div>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               )
             })}
           </div>
-        </motion.div>
+        </div>
 
         {/* Image Modal */}
         <AnimatePresence>
           {selectedImage && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
               onClick={() => setSelectedImage(null)}
             >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
+              <div
                 className="relative max-w-4xl max-h-[90vh]"
                 onClick={e => e.stopPropagation()}
               >
@@ -691,16 +934,14 @@ const MediaGeneration = () => {
                   alt="Enlarged view" 
                   className="max-w-full max-h-[90vh] object-contain rounded-lg"
                 />
-              </motion.div>
-            </motion.div>
+              </div>
+            </div>
           )}
         </AnimatePresence>
 
         <div className="flex justify-end gap-4 mt-6">
-          <motion.div 
+          <div 
             className="relative"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
           >
             <button
               onClick={() => setIsExportOpen(!isExportOpen)}
@@ -709,7 +950,7 @@ const MediaGeneration = () => {
               <svg className="w-5 h-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
               </svg>
-              Preview & Export
+              Export Story
               <svg className={`w-5 h-5 ml-2 text-gray-500 transition-transform duration-200 ${isExportOpen ? 'transform rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
@@ -717,102 +958,95 @@ const MediaGeneration = () => {
             
             <AnimatePresence>
               {isExportOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute right-0 mt-2 w-64 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 overflow-hidden"
+                <div
+                  className="absolute right-0 mt-2 w-72 rounded-xl shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10 overflow-hidden"
                 >
-                  <div className="py-1">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                  <div className="py-2">
+                    {/* PDF Option */}
+                    <button
                       onClick={() => handlePreview('pdf')}
                       disabled={isGeneratingPreview}
                       className="group flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Export story as PDF with images"
                     >
-                      <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Preview PDF
-                    </motion.button>
+                      <div className="flex items-center flex-1">
+                        <div className="p-2 bg-blue-50 rounded-lg mr-3">
+                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">PDF Format</span>
+                          <span className="text-xs text-gray-500">Images with story text</span>
+                        </div>
+                      </div>
+                      {isGeneratingPreview && (
+                        <svg className="w-5 h-5 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      )}
+                    </button>
 
-                    {/* MP4 Preview Button and Dropdown */}
-                    <div className="relative group">
-                      <motion.button
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        onClick={() => setIsMp4SubmenuOpen(!isMp4SubmenuOpen)}
-                        disabled={isGeneratingPreview}
-                        className="group flex items-center justify-between w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <div className="flex items-center">
-                          <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {/* Audio Option */}
+                    <button
+                      onClick={() => handlePreview('audio')}
+                      disabled={isGeneratingPreview}
+                      className="group flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Export story as audio narration"
+                    >
+                      <div className="flex items-center flex-1">
+                        <div className="p-2 bg-purple-50 rounded-lg mr-3">
+                          <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m2.828-9.9a9 9 0 012.728-2.728" />
+                          </svg>
+                        </div>
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">Audio Format</span>
+                          <span className="text-xs text-gray-500">Narration only</span>
+                        </div>
+                      </div>
+                      {isGeneratingPreview && (
+                        <svg className="w-5 h-5 text-gray-400 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                      )}
+                    </button>
+
+                    {/* Video Option */}
+                    <button
+                      onClick={() => handlePreview('video')}
+                      disabled={isGeneratingPreview}
+                      className="group flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Export story as video with images and audio"
+                    >
+                      <div className="flex items-center flex-1">
+                        <div className="p-2 bg-green-50 rounded-lg mr-3">
+                          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                           </svg>
-                          Preview MP4
                         </div>
-                        <svg 
-                          className={`w-5 h-5 text-gray-400 group-hover:text-gray-500 transition-transform duration-200 ${isMp4SubmenuOpen ? 'transform rotate-90' : ''}`} 
-                          fill="none" 
-                          stroke="currentColor" 
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </motion.button>
-                      <AnimatePresence>
-                        {/* { isMp4SubmenuOpen && <span>helo</span>} */}
-                        {isMp4SubmenuOpen && (
-                          <div className="py-1">
-                            <motion.button
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              onClick={() => handlePreview('audio')}
-                              disabled={isGeneratingPreview}
-                              className="group flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                              <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m2.828-9.9a9 9 0 012.728-2.728" />
-                              </svg>
-                                Audio Only
-                              </motion.button>
-                              <motion.button
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              onClick={() => handlePreview('video')}
-                              disabled={true}
-                              className="group flex items-center w-full px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                              <svg className="w-5 h-5 mr-3 text-gray-400 group-hover:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                              </svg>
-                                Video with Audio
-                              </motion.button>
+                        <div className="flex flex-col items-start">
+                          <span className="font-medium">Video Format</span>
+                          <span className="text-xs text-gray-500">Images with narration</span>
                         </div>
-                        )}
-                      </AnimatePresence>
-                    </div>
+                      </div>
+                    </button>
                   </div>
-                </motion.div>
+                </div>
               )}
             </AnimatePresence>
-          </motion.div>
+          </div>
         </div>
 
         {/* Preview Modal */}
         <AnimatePresence>
           {isPreviewOpen && previewUrl && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
             >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
+              <div
                 className="bg-white rounded-2xl p-8 max-w-4xl w-full max-h-[90vh] overflow-auto"
               >
                 <div className="flex justify-between items-center mb-6">
@@ -820,9 +1054,7 @@ const MediaGeneration = () => {
                     {previewType === 'pdf' ? 'PDF Preview' : 'MP4 Preview'}
                   </h3>
                   <div className="flex gap-4">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                    <button
                       onClick={() => window.open(previewUrl, '_blank')}
                       className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
                     >
@@ -830,10 +1062,8 @@ const MediaGeneration = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                       </svg>
                       Download
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                    </button>
+                    <button
                       onClick={() => {
                         setIsPreviewOpen(false)
                         setPreviewUrl(null)
@@ -846,7 +1076,7 @@ const MediaGeneration = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                       Close
-                    </motion.button>
+                    </button>
                   </div>
                 </div>
                 <div className="flex justify-center">
@@ -864,8 +1094,8 @@ const MediaGeneration = () => {
                     />
                   )}
                 </div>
-              </motion.div>
-            </motion.div>
+              </div>
+            </div>
           )}
         </AnimatePresence>
 
@@ -879,21 +1109,17 @@ const MediaGeneration = () => {
           onSelect={setSelectedVoice}
           selectedVoice={selectedVoice}
           onSubmit={isSelectedAll ? handleGenerateAll : handleGenerateSelected}
+          userLanguage={userLanguage}
         />
 
         {/* Audio Preview */}
         <AnimatePresence>
           {previewAudio && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
+            <div
               className="fixed bottom-4 right-4 bg-white rounded-xl shadow-lg p-4"
             >
               <audio controls src={previewAudio} className="w-full" />
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+              <button
                 onClick={() => {
                   URL.revokeObjectURL(previewAudio)
                   setPreviewAudio(null)
@@ -901,8 +1127,8 @@ const MediaGeneration = () => {
                 className="mt-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
               >
                 Close Preview
-              </motion.button>
-            </motion.div>
+              </button>
+            </div>
           )}
         </AnimatePresence>
 

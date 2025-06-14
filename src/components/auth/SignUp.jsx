@@ -52,6 +52,14 @@ const validationRules = {
       isValid: value === formData.password,
       message: 'Passwords do not match'
     })
+  },
+  language: {
+    id: 5,
+    required: true,
+    validate: (value) => ({
+      isValid: ['en-US', 'hi'].includes(value),
+      message: 'Please select a valid language'
+    })
   }
 }
 
@@ -62,6 +70,7 @@ const SignUp = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    language: 'en', // Default to English
   })
   const [errors, setErrors] = useState({})
   const [touched, setTouched] = useState({})
@@ -187,7 +196,8 @@ const SignUp = () => {
         body: JSON.stringify({
           username: formData.name,
           email: formData.email,
-          password: formData.password
+          password: formData.password,
+          language: formData.language
         })
       });
 
@@ -207,6 +217,7 @@ const SignUp = () => {
       localStorage.setItem('accessToken', data.access);
       localStorage.setItem('refreshToken', data.refresh);
       localStorage.setItem('username', JSON.stringify(data.user.username));
+      localStorage.setItem('language', JSON.stringify(data.user.language));
       navigate('/create');
     } catch (error) {
       toast.error(error.message, {
@@ -410,6 +421,34 @@ const SignUp = () => {
                       className="mt-1 text-sm text-red-600"
                     >
                       {errors.confirmPassword}
+                    </motion.p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="language" className="block text-sm font-medium text-gray-700">
+                  Preferred Language
+                </label>
+                <div className="mt-1">
+                  <select
+                    id="language"
+                    name="language"
+                    value={formData.language}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={getInputClassName('language')}
+                  >
+                    <option value="en-US">English-US</option>
+                    <option value="hi">हिंदी (Hindi)</option>
+                  </select>
+                  {touched.language && errors.language && (
+                    <motion.p 
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-1 text-sm text-red-600"
+                    >
+                      {errors.language}
                     </motion.p>
                   )}
                 </div>

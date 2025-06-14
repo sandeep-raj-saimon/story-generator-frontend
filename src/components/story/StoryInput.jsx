@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, Link } from 'react-router-dom'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
 
@@ -8,10 +8,36 @@ const StoryInput = () => {
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [wordCount, setWordCount] = useState(0)
+  const [isPublic, setIsPublic] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [userCredits, setUserCredits] = useState(null)
+  const [loadingCredits, setLoadingCredits] = useState(true)
+
+  useEffect(() => {
+    fetchUserCredits()
+  }, [])
+
+  const fetchUserCredits = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/profile/`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setUserCredits(data.credits?.credits_remaining || 0)
+      }
+    } catch (err) {
+      console.error('Error fetching user credits:', err)
+    } finally {
+      setLoadingCredits(false)
+    }
+  }
 
   const handleTitleChange = (e) => {
     setTitle(e.target.value)
@@ -38,7 +64,7 @@ const StoryInput = () => {
         body: JSON.stringify({
           title,
           content,
-          is_public: false
+          is_public: isPublic
         })
       })
 
@@ -103,15 +129,36 @@ const StoryInput = () => {
             <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
               Create Your Story
             </h1>
-            <button
-              onClick={() => setIsDialogOpen(true)}
-              className="p-2 rounded-full hover:bg-indigo-100 transition-colors duration-200"
-              title="Need help getting started?"
-            >
-              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
+            <div className="flex items-center space-x-4">
+              {/* Credit Display */}
+              <div className="bg-white rounded-lg shadow-sm px-4 py-2 border border-gray-200">
+                <div className="flex items-center space-x-2">
+                  <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                  <div className="text-sm">
+                    <div className="font-medium text-gray-900">
+                      {loadingCredits ? (
+                        <div className="animate-pulse bg-gray-200 h-4 w-8 rounded"></div>
+                      ) : (
+                        `${userCredits} Credits`
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500">Remaining</div>
+                  </div>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => setIsDialogOpen(true)}
+                className="p-2 rounded-full hover:bg-indigo-100 transition-colors duration-200"
+                title="Need help getting started?"
+              >
+                <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Dialog */}
@@ -197,6 +244,107 @@ const StoryInput = () => {
               </div>
             </div>
 
+            {/* Privacy Settings */}
+            <div className="group">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Story Visibility
+              </label>
+              <div className="bg-white border border-gray-300 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        id="public"
+                        name="visibility"
+                        value="public"
+                        checked={isPublic}
+                        onChange={() => setIsPublic(true)}
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                      />
+                      <label htmlFor="public" className="ml-2 text-sm font-medium text-gray-700">
+                        Public
+                      </label>
+                    </div>
+                    <div className="flex items-center ml-6">
+                      <input
+                        type="radio"
+                        id="private"
+                        name="visibility"
+                        value="private"
+                        checked={!isPublic}
+                        onChange={() => setIsPublic(false)}
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                      />
+                      <label htmlFor="private" className="ml-2 text-sm font-medium text-gray-700">
+                        Private
+                      </label>
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {isPublic ? (
+                      <div className="flex items-center text-green-600">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Visible to everyone
+                      </div>
+                    ) : (
+                      <div className="flex items-center text-gray-600">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                        </svg>
+                        Only visible to you
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  {isPublic 
+                    ? "Your story will be visible in the Explore section and can be discovered by other users."
+                    : "Your story will only be visible to you in your My Stories section."
+                  }
+                </p>
+              </div>
+            </div>
+
+            {/* Credit Information */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-medium text-blue-800">Credit Information</h3>
+                    <p className="text-blue-700 text-sm">
+                      {loadingCredits ? (
+                        <span className="animate-pulse bg-blue-200 h-4 w-32 rounded"></span>
+                      ) : userCredits > 0 ? (
+                        `You have ${userCredits} credit${userCredits !== 1 ? 's' : ''} remaining. Saving this story will cost 1 credit.`
+                      ) : (
+                        <span className="text-red-600 font-medium">You need at least 1 credit to save a story.</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                {userCredits === 0 && (
+                  <Link
+                    to="/pricing"
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 transition-colors"
+                  >
+                    Get Credits
+                    <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </Link>
+                )}
+              </div>
+            </div>
+
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-100 transform transition-all duration-300 hover:scale-[1.02]">
               <h3 className="text-lg font-medium text-blue-800 mb-3">How it works:</h3>
               <ol className="space-y-3 text-blue-700">
@@ -240,7 +388,7 @@ const StoryInput = () => {
             <div className="flex justify-end">
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={isSaving || userCredits === 0}
                 className="group relative inline-flex items-center justify-center px-8 py-3 text-lg font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-purple-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>

@@ -329,6 +329,12 @@ const GeneratedContent = () => {
                       title="PDF Preview"
                     />
                   ) : selectedFile.type === 'audio' ? (
+                    <audio
+                      src={selectedFile.url}
+                      controls
+                      className="w-full mt-4"
+                    />
+                  ) : selectedFile.type === 'video' ? (
                     <video
                       src={selectedFile.url}
                       controls
