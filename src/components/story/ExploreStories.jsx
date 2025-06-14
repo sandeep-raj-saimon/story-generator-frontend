@@ -18,7 +18,7 @@ const ExploreStories = () => {
       try {
         setLoading(true);
         const response = await fetch(
-          `${API_BASE_URL}/stories/?page=${currentPage}&page_size=${pageSize}&search=${searchTerm}&is_public=true`,
+          `${API_BASE_URL}/stories/?page=${currentPage}&page_size=${pageSize}&search=${searchTerm}&is_public=true&other_user=true`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem('accessToken')}`
