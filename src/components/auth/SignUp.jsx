@@ -70,7 +70,7 @@ const SignUp = () => {
     email: '',
     password: '',
     confirmPassword: '',
-    language: 'en', // Default to English
+    language: 'en-US', // Default to English
   })
   const [errors, setErrors] = useState({})
   const [touched, setTouched] = useState({})
@@ -439,7 +439,7 @@ const SignUp = () => {
                     onBlur={handleBlur}
                     className={getInputClassName('language')}
                   >
-                    <option value="en-US">English-US</option>
+                    <option value="en-US" defaultChecked>English-US</option>
                     <option value="hi">हिंदी (Hindi)</option>
                   </select>
                   {touched.language && errors.language && (
