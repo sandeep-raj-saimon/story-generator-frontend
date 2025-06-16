@@ -11,6 +11,8 @@ import StoryDetail from './components/story/StoryDetail'
 import MyStories from './components/story/MyStories'
 import ExploreStories from './components/story/ExploreStories'
 import StoryView from './components/story/StoryView'
+import GuestStoryBrowser from './components/story/GuestStoryBrowser'
+import GuestStoryView from './components/story/GuestStoryView'
 import MediaGeneration from './components/story/MediaGeneration'
 import GeneratedContent from './components/story/GeneratedContent'
 import PricingPage from './components/pricing/PricingPage'
@@ -21,6 +23,7 @@ import RefundPolicy from './components/legal/RefundPolicy'
 import ContactUs from './components/legal/ContactUs'
 import GuidedTour from './components/onboarding/GuidedTour'
 import { OnboardingProvider } from './contexts/OnboardingContext'
+import { GuestProvider } from './contexts/GuestContext'
 // import SubscriptionManager from './components/subscription/SubscriptionManager'
 import { NavigationProvider } from './utils/navigationContext'
 
@@ -32,11 +35,12 @@ const AppContent = () => {
                     location.pathname === '/forgot-password' || location.pathname.startsWith('/reset-password')
   const isLegalPage = location.pathname === '/terms' || location.pathname === '/privacy' || 
                      location.pathname === '/refund' || location.pathname === '/contact'
+  const isGuestPage = location.pathname === '/browse' || location.pathname.startsWith('/guest/')
 
   return (
     <NavigationProvider navigate={navigate}>
       <div className="min-h-screen bg-gray-100 flex flex-col">
-        {!isLandingPage && !isAuthPage && !isLegalPage && <Navbar />}
+        {!isLandingPage && !isAuthPage && !isLegalPage && !isGuestPage && <Navbar />}
         <div className="flex-grow">
           <Routes>
             <Route path="/" element={<LandingPage />} />
@@ -49,6 +53,8 @@ const AppContent = () => {
             <Route path="/story/:id" element={<StoryView />} />
             <Route path="/my-stories" element={<MyStories />} />
             <Route path="/explore" element={<ExploreStories />} />
+            <Route path="/browse" element={<GuestStoryBrowser />} />
+            <Route path="/guest/story/:id" element={<GuestStoryView />} />
             <Route path="/stories/:storyId/media" element={<MediaGeneration />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/profile/content" element={<GeneratedContent />} />
@@ -70,11 +76,13 @@ const AppContent = () => {
 
 function App() {
   return (
-    <OnboardingProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </OnboardingProvider>
+    <GuestProvider>
+      <OnboardingProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </OnboardingProvider>
+    </GuestProvider>
   )
 }
 
