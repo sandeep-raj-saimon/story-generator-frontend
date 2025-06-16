@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast, ToastContainer } from 'react-toastify'
 import { motion } from 'framer-motion'
+import { useOnboarding } from '../../contexts/OnboardingContext'
 import 'react-toastify/dist/ReactToastify.css'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
@@ -65,6 +66,7 @@ const validationRules = {
 
 const SignUp = () => {
   const navigate = useNavigate()
+  const { markUserAsRegistered } = useOnboarding()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -218,6 +220,10 @@ const SignUp = () => {
       localStorage.setItem('refreshToken', data.refresh);
       localStorage.setItem('username', JSON.stringify(data.user.username));
       localStorage.setItem('language', JSON.stringify(data.user.language));
+      
+      // Mark user as registered to trigger the guided tour
+      markUserAsRegistered();
+      
       navigate('/create');
     } catch (error) {
       toast.error(error.message, {

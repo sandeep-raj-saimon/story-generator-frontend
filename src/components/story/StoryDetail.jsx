@@ -229,6 +229,7 @@ const StoryDetail = () => {
             onClick={handleSegmentStory}
             disabled={isSegmenting || isSegmentingDone}
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+            data-tour="segment-story"
           >
             {isSegmenting ? 'Segmenting...' : 'Segment Story'}
           </button>
@@ -311,6 +312,7 @@ const StoryDetail = () => {
             <button
               onClick={() => navigate(`/stories/${id}/media`)}
               className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              data-tour="media-generation"
             >
               Move to Media Generation
             </button>

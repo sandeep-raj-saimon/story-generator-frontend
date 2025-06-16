@@ -19,6 +19,8 @@ import TermsAndConditions from './components/legal/TermsAndConditions'
 import PrivacyPolicy from './components/legal/PrivacyPolicy'
 import RefundPolicy from './components/legal/RefundPolicy'
 import ContactUs from './components/legal/ContactUs'
+import GuidedTour from './components/onboarding/GuidedTour'
+import { OnboardingProvider } from './contexts/OnboardingContext'
 // import SubscriptionManager from './components/subscription/SubscriptionManager'
 import { NavigationProvider } from './utils/navigationContext'
 
@@ -60,6 +62,7 @@ const AppContent = () => {
           </Routes>
         </div>
         {!isAuthPage && <Footer />}
+        <GuidedTour />
       </div>
     </NavigationProvider>
   )
@@ -67,9 +70,11 @@ const AppContent = () => {
 
 function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <OnboardingProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </OnboardingProvider>
   )
 }
 

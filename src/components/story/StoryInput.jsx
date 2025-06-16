@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useOnboarding } from '../../contexts/OnboardingContext'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
 
 const StoryInput = () => {
   const navigate = useNavigate()
+  const { triggerTour } = useOnboarding()
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [wordCount, setWordCount] = useState(0)
@@ -149,10 +151,32 @@ const StoryInput = () => {
                 </div>
               </div>
               
+              {/* Tour Controls */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={triggerTour}
+                  className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                  title="Take a guided tour of Story Generator features"
+                >
+                  <span className="font-medium">🎯 Start Tour</span>
+                </button>
+                {/* <button
+                  onClick={resetTour}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 text-gray-600 bg-white rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md"
+                  title="Reset tour to show it again"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span className="text-sm">Reset</span>
+                </button> */}
+              </div>
+              
               <button
                 onClick={() => setIsDialogOpen(true)}
                 className="p-2 rounded-full hover:bg-indigo-100 transition-colors duration-200"
                 title="Need help getting started?"
+                data-tour="generate-story-help"
               >
                 <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -417,7 +441,7 @@ const StoryInput = () => {
       </div>
 
       {/* Add custom styles for animations */}
-      <style jsx>{`
+      <style>{`
         @keyframes blob {
           0% { transform: translate(0px, 0px) scale(1); }
           33% { transform: translate(30px, -50px) scale(1.1); }
