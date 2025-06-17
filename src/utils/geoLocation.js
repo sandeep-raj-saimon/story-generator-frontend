@@ -21,8 +21,7 @@ export const getUserCountry = async () => {
     // Try multiple geolocation services for reliability
     const country = await Promise.any([
       fetchCountryFromIpApi(),
-      fetchCountryFromIpInfo(),
-      fetchCountryFromIpApiCo()
+      fetchCountryFromIpInfo()
     ])
 
     // Cache the result
@@ -73,25 +72,6 @@ const fetchCountryFromIpInfo = async () => {
   
   const data = await response.json()
   return data.country
-}
-
-/**
- * Fetch country from ip-api.com
- */
-const fetchCountryFromIpApiCo = async () => {
-  const response = await fetch('http://ip-api.com/json/?fields=countryCode', {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json'
-    }
-  })
-  
-  if (!response.ok) {
-    throw new Error('ip-api.com request failed')
-  }
-  
-  const data = await response.json()
-  return data.countryCode
 }
 
 /**
