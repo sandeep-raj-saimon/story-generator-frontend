@@ -19,9 +19,64 @@ const PricingPage = () => {
   const [isValidatingCode, setIsValidatingCode] = useState(false)
   const [discountApplied, setDiscountApplied] = useState(false)
   const [discountPercentage, setDiscountPercentage] = useState(0)
-  const [userCountry, setUserCountry] = useState('US')
   const [currencySymbol, setCurrencySymbol] = useState('$')
-  const [detectingLocation, setDetectingLocation] = useState(true)
+  
+  // Story Calculator State
+  const [calculatorInputs, setCalculatorInputs] = useState({
+    imagesPerStory: 5,
+    charactersPerStory: 1000,
+    storiesCount: 1
+  })
+  const [calculatorResults, setCalculatorResults] = useState({})
+
+  // Credit costs from backend utils.py
+  const CREDIT_COSTS = {
+    image: 10,  // 10 credits per image
+    audio: 0.25,  // 0.25 credits per audio
+  }
+
+  // Calculate credits needed for user inputs
+  const calculateCreditsNeeded = () => {
+    const { imagesPerStory, charactersPerStory, storiesCount } = calculatorInputs
+    
+    // Calculate credits per story
+    const imageCredits = imagesPerStory * CREDIT_COSTS.image
+    const wordCount = Math.ceil(charactersPerStory / 5) // Rough estimate: 5 characters per word
+    const audioCredits = wordCount * CREDIT_COSTS.audio
+    const creditsPerStory = imageCredits + audioCredits
+    
+    // Calculate total credits needed
+    const totalCreditsNeeded = creditsPerStory * storiesCount
+    
+    // Calculate how many stories each plan can create
+    const planCalculations = pricingConfig?.plans.map(plan => {
+      const storiesPossible = Math.floor(plan.credits / creditsPerStory)
+      const remainingCredits = plan.credits % creditsPerStory
+      
+      return {
+        planName: plan.name,
+        planCredits: plan.credits,
+        planPrice: plan.price,
+        storiesPossible,
+        remainingCredits: Math.round(remainingCredits * 100) / 100,
+        creditsPerStory: Math.round(creditsPerStory * 100) / 100
+      }
+    }) || []
+    
+    setCalculatorResults({
+      creditsPerStory: Math.round(creditsPerStory * 100) / 100,
+      totalCreditsNeeded,
+      planCalculations
+    })
+  }
+
+  // Update calculator when inputs change
+  useEffect(() => {
+    if (pricingConfig) {
+      calculateCreditsNeeded()
+    }
+  }, [calculatorInputs, pricingConfig])
+
   // Load Razorpay script
   useEffect(() => {
     const script = document.createElement('script')
@@ -195,10 +250,8 @@ const PricingPage = () => {
   useEffect(() => {
     const fetchPricingConfig = async () => {
       try {
-        setDetectingLocation(true)
         // Detect user's country
         const country = await getUserCountry()
-        setUserCountry(country)
         // Decide domain and currency
         let domain = 'com'
         let currency = '$'
@@ -216,7 +269,6 @@ const PricingPage = () => {
         setError(err.message)
       } finally {
         setLoading(false)
-        setDetectingLocation(false)
       }
     }
     fetchPricingConfig()
@@ -409,7 +461,7 @@ const PricingPage = () => {
                               d="M5 13l4 4L19 7"
                             />
                           </svg>
-                          <span className="ml-3 text-sm text-gray-600">{feature}</span>
+                          <span className="ml-3 text-sm text-gray-600">{feature.replace(/story|stories/g, 'credit' + (feature.includes('1 ') ? '' : 's'))}</span>
                         </li>
                       ))}
                     </ul>
@@ -426,6 +478,126 @@ const PricingPage = () => {
               </div>
             ))}
           </AnimatePresence>
+        </div>
+
+        {/* Story Calculator */}
+        <div className="max-w-4xl mx-auto mt-16 mb-12">
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Story Calculator</h2>
+              <p className="text-gray-600">
+                Calculate how many stories you can create with each plan based on your needs
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Images per Story
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={calculatorInputs.imagesPerStory}
+                  onChange={(e) => setCalculatorInputs(prev => ({
+                    ...prev,
+                    imagesPerStory: parseInt(e.target.value) || 1
+                  }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                />
+                <p className="text-xs text-gray-500 mt-1">1-20 images</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Characters per Story
+                </label>
+                <input
+                  type="number"
+                  min="100"
+                  max="10000"
+                  step="100"
+                  value={calculatorInputs.charactersPerStory}
+                  onChange={(e) => setCalculatorInputs(prev => ({
+                    ...prev,
+                    charactersPerStory: parseInt(e.target.value) || 100
+                  }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                />
+                <p className="text-xs text-gray-500 mt-1">100-10,000 characters</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Number of Stories
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={calculatorInputs.storiesCount}
+                  onChange={(e) => setCalculatorInputs(prev => ({
+                    ...prev,
+                    storiesCount: parseInt(e.target.value) || 1
+                  }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                />
+                <p className="text-xs text-gray-500 mt-1">1-100 stories</p>
+              </div>
+            </div>
+
+            {/* Calculator Results */}
+            {calculatorResults.creditsPerStory && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Results</h3>
+                  <div className="flex justify-center space-x-8 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-700">Credits per story:</span>
+                      <span className="ml-1 text-indigo-600 font-bold">{calculatorResults.creditsPerStory}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-700">Total credits needed:</span>
+                      <span className="ml-1 text-indigo-600 font-bold">{calculatorResults.totalCreditsNeeded}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {calculatorResults.planCalculations?.map((plan, index) => (
+                    <div key={index} className="bg-white rounded-lg p-4 border border-gray-200">
+                      <h4 className="font-semibold text-gray-900 mb-2">{plan.planName}</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Plan credits:</span>
+                          <span className="font-medium">{plan.planCredits}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Stories possible:</span>
+                          <span className={`font-bold ${plan.storiesPossible > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {plan.storiesPossible}
+                          </span>
+                        </div>
+                        {plan.storiesPossible > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Remaining credits:</span>
+                            <span className="font-medium text-gray-500">{plan.remainingCredits}</span>
+                          </div>
+                        )}
+                        {plan.planPrice > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Plan price:</span>
+                            <span className="font-medium">{currencySymbol}{plan.planPrice}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-16 text-center max-w-2xl mx-auto">

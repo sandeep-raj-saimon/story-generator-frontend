@@ -1,11 +1,18 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import VoiceSelectionModal from './VoiceSelectionModal'
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
+
+// Credit costs from backend utils.py
+const CREDIT_COSTS = {
+  image: 10,  // 10 credits per image
+  audio: 0.25,  // 0.25 credits per audio
+}
+
 const MediaGeneration = () => {
   const { storyId } = useParams()
   const navigate = useNavigate()
@@ -29,9 +36,12 @@ const MediaGeneration = () => {
   const [MAX_SELECTED_SCENES] = useState(3)
   const [isExportOpen, setIsExportOpen] = useState(false)
   const [userLanguage, setUserLanguage] = useState(null)
+  const [userCredits, setUserCredits] = useState(0)
+  const [loadingCredits, setLoadingCredits] = useState(true)
 
   useEffect(() => {
     fetchUserLanguage()
+    fetchUserCredits()
   }, [])
 
   const fetchUserLanguage = async () => {
@@ -50,6 +60,61 @@ const MediaGeneration = () => {
       console.error('Error fetching user language:', error)
       setUserLanguage('en-US') // Default to English
     }
+  }
+
+  const fetchUserCredits = async () => {
+    try {
+      setLoadingCredits(true)
+      const response = await fetch(`${API_BASE_URL}/profile/`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('User credits:', data.credits.credits_remaining)
+        setUserCredits(data.credits.credits_remaining || 0)
+      } else {
+        console.error('Failed to fetch user profile')
+        setUserCredits(0)
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error)
+      setUserCredits(0)
+    } finally {
+      setLoadingCredits(false)
+    }
+  }
+
+  // Calculate credit cost for selected scenes
+  const calculateCreditCost = (scenesToCalculate, mediaType = 'generate') => {
+    let totalCost = 0
+    
+    scenesToCalculate.forEach(scene => {
+      if (mediaType === 'generate' || mediaType === 'image') {
+        totalCost += CREDIT_COSTS.image
+      }
+      if (mediaType === 'generate' || mediaType === 'audio') {
+        // Calculate audio cost based on word count
+        const wordCount = scene.content.length
+        totalCost += wordCount * CREDIT_COSTS.audio
+      }
+    })
+    
+    return Math.ceil(totalCost * 100) / 100 // Round to 2 decimal places
+  }
+
+  // Check if user has enough credits for selected scenes
+  const hasEnoughCredits = (scenesToCheck, mediaType = 'generate') => {
+    const requiredCredits = calculateCreditCost(scenesToCheck, mediaType)
+    return userCredits >= requiredCredits
+  }
+
+  // Get credit cost display text
+  const getCreditCostText = (scenesToCheck, mediaType = 'generate') => {
+    const cost = calculateCreditCost(scenesToCheck, mediaType)
+    return `${cost} credits`
   }
 
   useEffect(() => {
@@ -85,7 +150,6 @@ const MediaGeneration = () => {
   const handleGenerateAll = async () => {
     if (selectedMediaType === 'generate') {
       try {
-        setGeneratingAll(true)
         setErrors([])
         
         // Get all scenes
@@ -106,6 +170,9 @@ const MediaGeneration = () => {
           setShowVoiceModal(true)
           return
         }
+
+        // Now set generating to true after voice is confirmed
+        setGeneratingAll(true)
 
         // Generate media for each scene
         const generationPromises = scenes.flatMap(scene => [
@@ -182,6 +249,7 @@ const MediaGeneration = () => {
                 // Add a small delay to ensure backend has processed all media
                 setTimeout(async () => {
                   await fetchScenes()
+                  await fetchUserCredits() // Refresh credits after successful generation
                   toast.success('All media generated successfully!')
                 }, 2000)
               }
@@ -236,7 +304,6 @@ const MediaGeneration = () => {
     } else {
       // Handle single media type generation (existing code)
       if (selectedMediaType === 'audio' && !selectedVoice) {
-        setIsSelectedAll(true)
         setShowVoiceModal(true)
         return
       }
@@ -310,6 +377,7 @@ const MediaGeneration = () => {
               // Add a small delay to ensure backend has processed all media
               setTimeout(async () => {
                 await fetchScenes()
+                await fetchUserCredits() // Refresh credits after successful generation
                 toast.success(`${selectedMediaType.charAt(0).toUpperCase() + selectedMediaType.slice(1)} generation completed!`)
               }, 2000)
             }
@@ -351,7 +419,6 @@ const MediaGeneration = () => {
   const handleGenerateSelected = async () => {
     if (selectedMediaType === 'generate') {
       try {
-        setGeneratingSelected(true)
         setErrors([])
 
         // Check for voice selection before proceeding
@@ -359,6 +426,9 @@ const MediaGeneration = () => {
           setShowVoiceModal(true)
           return
         }
+
+        // Now set generating to true after voice is confirmed
+        setGeneratingSelected(true)
 
         // Generate media for each selected scene
         const generationPromises = selectedScenes.flatMap(scene => [
@@ -435,6 +505,7 @@ const MediaGeneration = () => {
                 // Add a small delay to ensure backend has processed all media
                 setTimeout(async () => {
                   await fetchScenes()
+                  await fetchUserCredits() // Refresh credits after successful generation
                   toast.success('All media generated successfully!')
                 }, 2000)
               }
@@ -559,6 +630,7 @@ const MediaGeneration = () => {
               // Add a small delay to ensure backend has processed all media
               setTimeout(async () => {
                 await fetchScenes()
+                await fetchUserCredits() // Refresh credits after successful generation
                 toast.success(`${selectedMediaType.charAt(0).toUpperCase() + selectedMediaType.slice(1)} generation completed!`)
               }, 2000)
             }
@@ -714,6 +786,98 @@ const MediaGeneration = () => {
     )
   }
 
+  // Show loading state during media generation
+  if (generatingAll || generatingSelected) {
+    const isGeneratingAll = generatingAll
+    const scenesToProcess = isGeneratingAll ? scenes : selectedScenes
+    const mediaType = selectedMediaType === 'generate' ? 'images and audio' : selectedMediaType === 'image' ? 'images' : 'audio'
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+        {/* Animated background shapes */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
+        </div>
+
+        <div className="relative p-6 max-w-7xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-xl p-8 mb-6 border border-gray-100">
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+                Media Generation
+              </h2>
+            </div>
+
+            {/* Media Generation Loading State */}
+            <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-6"></div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                  Generating {mediaType.charAt(0).toUpperCase() + mediaType.slice(1)} for Your Story
+                </h2>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  We're creating {mediaType} for {scenesToProcess.length} scene{scenesToProcess.length > 1 ? 's' : ''}. 
+                  This process usually takes 2-5 minutes depending on the number of scenes.
+                </p>
+                
+                {/* Progress Bar */}
+                <div className="w-full bg-gray-200 rounded-full h-3 mb-6 max-w-md mx-auto">
+                  <div className="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full animate-pulse" style={{ width: '45%' }}></div>
+                </div>
+                
+                <div className="text-sm text-gray-500 mb-8">
+                  <p>• Processing scene content and descriptions</p>
+                  <p>• Generating {mediaType} using AI models</p>
+                  <p>• Optimizing media quality and format</p>
+                  <p>• Preparing for download and export</p>
+                </div>
+
+                {/* Scene Progress */}
+                <div className="bg-gray-50 rounded-xl p-6 max-w-2xl mx-auto">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                    Processing {scenesToProcess.length} Scene{scenesToProcess.length > 1 ? 's' : ''}
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {scenesToProcess.slice(0, 6).map((scene, index) => (
+                      <div key={scene.id} className="flex items-center space-x-3 bg-white p-3 rounded-lg border border-gray-200">
+                        <div className="flex-shrink-0">
+                          <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                            <span className="text-indigo-600 font-semibold text-sm">{index + 1}</span>
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {scene.title}
+                          </p>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                            <span className="text-xs text-gray-500">Processing...</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {scenesToProcess.length > 6 && (
+                      <div className="flex items-center justify-center text-sm text-gray-500">
+                        +{scenesToProcess.length - 6} more scenes
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Credit Information */}
+                <div className="mt-6 text-xs text-gray-400">
+                  <p>Credits will be deducted once generation is complete</p>
+                  <p>You can safely navigate away - generation will continue in the background</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       {/* Animated background shapes */}
@@ -739,6 +903,36 @@ const MediaGeneration = () => {
                     You can select up to <span className="font-bold">{MAX_SELECTED_SCENES}</span> scenes at a time
                   </p>
                 </div>
+                
+                {/* Credit Display */}
+                <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  </svg>
+                  <p className="text-sm font-medium text-green-700">
+                    {loadingCredits ? (
+                      <span className="flex items-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Loading credits...
+                      </span>
+                    ) : (
+                      <span>
+                        <span className="font-bold">{userCredits}</span> credits remaining
+                        {userCredits < 10 && (
+                          <Link 
+                            to="/pricing" 
+                            className="ml-2 text-blue-600 hover:text-blue-800 underline text-xs"
+                          >
+                            Get More Credits
+                          </Link>
+                        )}
+                      </span>
+                    )}
+                  </p>
+                </div>
               </div>
             </div>
             <div className="flex gap-4">
@@ -752,26 +946,63 @@ const MediaGeneration = () => {
                 <option value="audio">Audio</option>
               </select>
               
-              {selectedScenes.length > 0 && (
+              {/* Generate All Button */}
+              <div className="flex flex-col items-end">
                 <button
-                  onClick={handleGenerateSelected}
-                  disabled={generatingSelected}
-                  className="bg-gradient-to-r from-green-500 to-green-600 text-white py-2 px-6 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center shadow-sm"
+                  onClick={handleGenerateAll}
+                  disabled={generatingAll || !hasEnoughCredits(scenes, selectedMediaType)}
+                  className="bg-gradient-to-r from-purple-500 to-purple-600 text-white py-2 px-6 rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center shadow-sm"
                 >
-                  {generatingSelected ? (
+                  {generatingAll ? (
                     <>
                       <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Generating...
+                      Generating All...
                     </>
                   ) : (
                     <>
-                      Generate ({selectedScenes.length}/{MAX_SELECTED_SCENES})
+                      Generate All ({scenes.length} scenes)
                     </>
                   )}
                 </button>
+                <div className="mt-1 text-xs text-gray-500">
+                  Cost: {getCreditCostText(scenes, selectedMediaType)}
+                  {!hasEnoughCredits(scenes, selectedMediaType) && (
+                    <span className="text-red-500 ml-2">Insufficient credits</span>
+                  )}
+                </div>
+              </div>
+              
+              {selectedScenes.length > 0 && (
+                <div className="flex flex-col items-end">
+                  <button
+                    onClick={handleGenerateSelected}
+                    disabled={generatingSelected || !hasEnoughCredits(selectedScenes, selectedMediaType)}
+                    className="bg-gradient-to-r from-green-500 to-green-600 text-white py-2 px-6 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center shadow-sm"
+                  >
+                    {generatingSelected ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        Generate ({selectedScenes.length}/{MAX_SELECTED_SCENES})
+                      </>
+                    )}
+                  </button>
+                  <div className="mt-1 text-xs text-gray-500">
+                    Cost: {getCreditCostText(selectedScenes, selectedMediaType)}
+                    {!hasEnoughCredits(selectedScenes, selectedMediaType) && (
+                      <span className="text-red-500 ml-2">Insufficient credits</span>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -1066,7 +1297,7 @@ const MediaGeneration = () => {
                         setIsPreviewOpen(false)
                         setPreviewUrl(null)
                         setPreviewType('pdf')
-                        navigate(`/generated-content/`)
+                        navigate(`/profile/content/`)
                       }}
                       className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
                     >

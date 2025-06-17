@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence } from 'framer-motion'
 import SceneEditor from './SceneEditor'
 import SceneMedia from './SceneMedia'
 
@@ -198,15 +198,73 @@ const StoryDetail = () => {
   }
 
   if (isLoading) {
-    return <div className="text-center p-4">Loading story...</div>
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading story...</p>
+        </div>
+      </div>
+    )
   }
 
   if (error) {
-    return <div className="text-center p-4 text-red-500">{error}</div>
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-2">⚠️</div>
+          <p className="text-red-500">{error}</p>
+        </div>
+      </div>
+    )
   }
 
   if (!story) {
-    return <div className="text-center p-4">Story not found</div>
+    return (
+      <div className="flex justify-center items-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-gray-600">Story not found</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show loading state during segmentation
+  if (isSegmenting) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-800">{story.title}</h1>
+        </div>
+
+        <div className="prose max-w-none mb-8">
+          <p className="whitespace-pre-wrap">{story.content}</p>
+        </div>
+
+        {/* Segmentation Loading State */}
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto mb-6"></div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-4">Segmenting Your Story</h2>
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              We're breaking down your story into scenes that can be enhanced with images and audio. 
+              This process usually takes 30-60 seconds.
+            </p>
+            
+            {/* Progress Bar */}
+            <div className="w-full bg-gray-200 rounded-full h-3 mb-6 max-w-md mx-auto">
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+            </div>
+            
+            <div className="text-sm text-gray-500">
+              <p>• Analyzing story structure</p>
+              <p>• Creating scene descriptions</p>
+              <p>• Preparing for media generation</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (isEditingScene) {
@@ -391,16 +449,10 @@ const StoryDetail = () => {
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {sceneToDelete && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
           >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+            <div
               className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl"
             >
               <h3 className="text-xl font-semibold text-gray-900 mb-4">
@@ -435,8 +487,8 @@ const StoryDetail = () => {
                   )}
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
       </AnimatePresence>
     </div>
