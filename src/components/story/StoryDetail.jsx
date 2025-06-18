@@ -309,6 +309,23 @@ const StoryDetail = () => {
       {scenes.length > 0 && (
         <div className="mt-8">
           <h2 className="text-2xl font-bold mb-4">Scenes</h2>
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start space-x-3">
+            <svg className="w-6 h-6 text-blue-400 mt-1 flex-shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" />
+              <path stroke="currentColor" strokeWidth="2" d="M12 16v-4m0-4h.01" />
+            </svg>
+            <div>
+              <div className="font-semibold text-blue-700">How to read this section</div>
+              <ul className="text-blue-700 text-sm mt-1 list-disc pl-5">
+                <li>
+                  <span className="font-medium">Scene Content</span> is the actual story text for this scene.
+                </li>
+                <li>
+                  <span className="font-medium">Description</span> is a summary used for image generation.
+                </li>
+              </ul>
+            </div>
+          </div>
           <div className="space-y-6">
             {scenes.map((scene, index) => (
               <div key={scene.id} className="border rounded-lg p-6 bg-white shadow-sm hover:shadow-md transition-shadow">
