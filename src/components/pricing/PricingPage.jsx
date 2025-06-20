@@ -122,27 +122,29 @@ const PricingPage = () => {
   const verifyPayment = async (response) => {
     try {
       const domain = window.location.hostname.split('.').pop() === 'localhost' ? 'in' : 'com'
-      const verifyResponse = await fetch(`${API_BASE_URL}/payment/verify/?domain=${domain}`, {
+      const verifyResponse = await fetch(`${API_BASE_URL}/payment/verify/?domain=${domain}&plan_id=${selectedPlan.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         },
-        body: JSON.stringify({
-          razorpay_payment_id: response.razorpay_payment_id,
-          razorpay_order_id: response.razorpay_order_id,
-          razorpay_signature: response.razorpay_signature,
-          order_id: response.order_id,
-          plan_id: response.plan_id
-        })
+        body: JSON.stringify(response)
       })
       
       if (verifyResponse.ok) {
         const data = await verifyResponse.json()
-        toast.success(data.message, {
-          autoClose: 5000,
-          theme: "colored",
-        })
+        toast.success(data.message)
+        
+        // Fire Google Ads conversion event
+        if (typeof window.gtag === 'function') {
+          window.gtag('event', 'conversion', {
+            'send_to': 'AW-436394762/SE0zCMaE9tsaEIq2i9AB',
+            'value': response.amount,
+            'currency': response.currency,
+            'transaction_id': response.order_id
+          })
+        }
+
         setTimeout(() => {
           navigate('/')
         }, 5000)
