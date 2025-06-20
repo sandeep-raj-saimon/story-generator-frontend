@@ -7,7 +7,7 @@ import { AnimatePresence } from 'framer-motion'
 import { getUserCountry } from '../../utils/geoLocation'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL
-const RAZORPAY_KEY = import.meta.env.VITE_TEST_RAZORPAY_KEY_ID
+const RAZORPAY_KEY = import.meta.env.VITE_PROD_RAZORPAY_KEY_ID
 
 const PricingPage = () => {
   const navigate = useNavigate()
