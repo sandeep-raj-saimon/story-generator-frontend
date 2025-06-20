@@ -56,7 +56,6 @@ const TermsAndConditions = () => {
                 </p>
                 <ul className="list-none space-y-2">
                   {[
-                    'Be at least 13 years of age',
                     'Provide accurate and complete information',
                     'Maintain the security of your account',
                     'Notify us immediately of any unauthorized use'
@@ -245,7 +244,7 @@ const TermsAndConditions = () => {
               <div className="bg-gray-50 rounded-lg p-6 border border-gray-100">
                 <p className="mb-4 text-gray-700">
                   We reserve the right to modify these terms at any time. We will notify you of any material 
-                  changes by posting the new terms on this page and updating the "Last updated" date.
+                  changes by posting the new terms on this page.
                 </p>
               </div>
             </motion.section>
@@ -259,7 +258,7 @@ const TermsAndConditions = () => {
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">9. Contact Information</h2>
               <div className="bg-gray-50 rounded-lg p-6 border border-gray-100">
                 <p className="mb-4 text-gray-700">
-                  For any questions about these Terms and Conditions, please contact us at terms@whisprtales.com
+                  For any questions about these Terms and Conditions, please contact us at sandeeprajsaimon999@gmail.com
                 </p>
               </div>
             </motion.section>

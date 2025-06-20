@@ -1,47 +1,8 @@
-import React, { useState } from 'react';
-import { toast, ToastContainer } from 'react-toastify';
+import React from 'react';
+import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const ContactUs = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      // Here you would typically send the form data to your backend
-      // For now, we'll just simulate a successful submission
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success('Message sent successfully! We will get back to you soon.');
-      setFormData({
-        name: '',
-        email: '',
-        subject: '',
-        message: ''
-      });
-    } catch (error) {
-      toast.error('Failed to send message. Please try again later.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Contact Us</h1>
@@ -90,6 +51,24 @@ const ContactUs = () => {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+      <div className="mt-12 bg-indigo-50 rounded-lg p-6">
+        <h2 className="text-2xl font-semibold mb-4 text-center">
+          💬 Got feedback or feature ideas?
+        </h2>
+        <p className="text-center text-gray-600 mb-6">
+          Help us improve WhisprTales by sharing your thoughts.
+        </p>
+        <div className="text-center">
+          <a
+            href="https://docs.google.com/forms/d/e/1FAIpQLSfe5DkI8tXRJ1EvA6KXCST_Q2GDR6HkZ-Ob_ZgFoytauc9c8g/viewform?usp=dialog"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Share Your Feedback
+          </a>
         </div>
       </div>
       <ToastContainer position="top-center" />

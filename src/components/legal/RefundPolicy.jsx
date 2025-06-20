@@ -193,7 +193,7 @@ const RefundPolicy = () => {
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">6. Contact Information</h2>
               <div className="bg-gray-50 rounded-lg p-6 border border-gray-100">
                 <p className="mb-4 text-gray-700">
-                  For refund requests or questions about our refund policy, please contact us at refunds@whisprtales.com
+                  For refund requests or questions about our refund policy, please contact us at sandeeprajsaimon999@gmail.com
                 </p>
               </div>
             </motion.section>

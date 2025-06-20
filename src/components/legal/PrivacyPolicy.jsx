@@ -201,25 +201,10 @@ const PrivacyPolicy = () => {
             <motion.section 
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 1.5 }}
-              className="mb-8"
-            >
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. Children's Privacy</h2>
-              <div className="bg-gray-50 rounded-lg p-6 border border-gray-100">
-                <p className="mb-4 text-gray-700">
-                  Our service is not intended for children under 13 years of age. We do not knowingly collect 
-                  personal information from children under 13.
-                </p>
-              </div>
-            </motion.section>
-
-            <motion.section 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 1.7 }}
               className="mb-8"
             >
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">8. Changes to Privacy Policy</h2>
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">7. Changes to Privacy Policy</h2>
               <div className="bg-gray-50 rounded-lg p-6 border border-gray-100">
                 <p className="mb-4 text-gray-700">
                   We may update this privacy policy from time to time. We will notify you of any changes by 
@@ -237,7 +222,7 @@ const PrivacyPolicy = () => {
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">9. Contact Us</h2>
               <div className="bg-gray-50 rounded-lg p-6 border border-gray-100">
                 <p className="mb-4 text-gray-700">
-                  If you have any questions about this Privacy Policy, please contact us at privacy@whisprtales.com
+                  If you have any questions about this Privacy Policy, please contact us at sandeeprajsaimon999@gmail.com
                 </p>
               </div>
             </motion.section>
